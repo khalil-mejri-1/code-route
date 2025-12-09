@@ -30,12 +30,7 @@ const connectDB = async () => {
 connectDB();
 
 
-// --- ⭐️ مسار API لإنشاء الأسئلة ---
-// index.js (مسار app.post المصحح)
-
-// ⭐️⭐️ نقطة النهاية المحدثة لإضافة الأسئلة بالجملة ⭐️⭐️
-// (افتراض أن هذا الملف هو ملف الخادم الرئيسي مثل app.js أو server.js)
-
+// --- مسار API لإنشاء سؤال واحد ---
 app.post('/api/quiz/questions', async (req, res) => {
     try {
         // ⭐️⭐️ استقبال الحقوق المنفصلة مباشرة من req.body
@@ -69,7 +64,7 @@ app.post('/api/quiz/questions', async (req, res) => {
 });
 
 
-
+// --- مسار API لإضافة الأسئلة بالجملة (Batch Create) ---
 app.post('/api/quiz/questions/batch', async (req, res) => { 
     try {
         // التحقق مما إذا كان المدخل مصفوفة
@@ -90,7 +85,6 @@ app.post('/api/quiz/questions/batch', async (req, res) => {
         }));
 
         // استخدام insertMany لإضافة مجموعة الأسئلة دفعة واحدة
-        // يمكن إضافة { ordered: false } للسماح بإضافة الأسئلة الصحيحة حتى لو فشل أحدها
         const savedQuestions = await Question.insertMany(processedQuestions); 
         
         res.status(201).json({ 
@@ -99,22 +93,16 @@ app.post('/api/quiz/questions/batch', async (req, res) => {
         });
 
     } catch (error) {
-        // رسالة الخطأ ستكون أكثر تعقيداً في حالة insertMany
         res.status(400).json({ 
             message: 'فشل في إضافة بعض أو كل الأسئلة. تحقق من متطلبات الحقول (مثل category1 و nb_serie).', 
             error: error.message,
-            // يمكن إضافة تفاصيل الأخطاء هنا إذا كانت الأخطاء ناتجة عن التحقق في المخطط (Schema Validation)
         });
     }
 });
 
-// --- مسار API لجلب الأسئلة ---
-// index.js (تعديل المسار /api/quiz/questions)
-
-// --- مسار API لجلب الأسئلة ---
+// --- مسار API لجلب الأسئلة (مع الفلترة) ---
 app.get('/api/quiz/questions', async (req, res) => {
     try {
-        // ⭐️⭐️ استقبال حقلي البحث category1, category2 
         const { category1, category2, nb_serie } = req.query; 
 
         const query = {};
@@ -136,7 +124,188 @@ app.get('/api/quiz/questions', async (req, res) => {
         res.status(200).json(questions);
 
     } catch (error) {
-        // ... (معالجة الخطأ)
+        console.error('Error fetching filtered questions:', error);
+        res.status(500).json({ message: 'Error fetching questions' });
+    }
+});
+
+
+// --- مسار API لجلب جميع الأسئلة (بدون فلترة) ---
+app.get('/api/questions', async (req, res) => {
+    try {
+        const questions = await Question.find({});
+        res.json(questions);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Error fetching questions' });
+    }
+});
+
+
+// ------------------------------------------------------------------
+// ⭐️⭐️ NEW ENDPOINT: تحديث سؤال محدد (UPDATE) ⭐️⭐️
+// ------------------------------------------------------------------
+app.put('/api/questions/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const updateData = req.body;
+
+        // التأكد من أن nb_serie هو رقم إذا كان موجوداً
+        if (updateData.nb_serie) {
+            updateData.nb_serie = parseInt(updateData.nb_serie);
+        }
+
+        // خيار runValidators: true يضمن تطبيق قواعد التحقق من المخطط (Schema)
+        const updatedQuestion = await Question.findByIdAndUpdate(
+            id, 
+            updateData, 
+            { new: true, runValidators: true } 
+        );
+
+        if (!updatedQuestion) {
+            return res.status(404).json({ message: '❌ لم يتم العثور على السؤال للتحديث.' });
+        }
+
+        res.status(200).json({
+            message: `✅ تم تحديث السؤال بنجاح: ${id}`,
+            question: updatedQuestion
+        });
+
+    } catch (error) {
+        // التحقق من أخطاء التحقق من الصحة (Validation errors)
+        if (error.name === 'ValidationError') {
+            return res.status(400).json({ 
+                message: 'فشل في التحقق من صحة البيانات أثناء التحديث.', 
+                error: error.message 
+            });
+        }
+        console.error('Error updating question:', error);
+        res.status(500).json({
+            message: '❌ فشل في عملية تحديث السؤال.',
+            error: error.message
+        });
+    }
+});
+
+// ------------------------------------------------------------------
+// ⭐️⭐️ NEW ENDPOINT: حذف سؤال محدد (DELETE) ⭐️⭐️
+// ------------------------------------------------------------------
+app.delete('/api/questions/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const deletedQuestion = await Question.findByIdAndDelete(id);
+
+        if (!deletedQuestion) {
+            return res.status(404).json({ message: '❌ لم يتم العثور على السؤال للحذف.' });
+        }
+
+        res.status(200).json({
+            message: `✅ تم حذف السؤال بنجاح: ${id}`,
+            id: id
+        });
+
+    } catch (error) {
+        console.error('Error deleting question:', error);
+        res.status(500).json({
+            message: '❌ فشل في عملية حذف السؤال.',
+            error: error.message
+        });
+    }
+});
+// ------------------------------------------------------------------
+
+
+// --- مسارات موجودة سابقاً (تبديل الصور والإجابات) ---
+
+app.post('/api/questions/swap-images', async (req, res) => {
+    try {
+        // ... الكود الأصلي لتبديل الصور
+        const { question1Id, question2Id } = req.body;
+
+        if (!question1Id || !question2Id) {
+            return res.status(400).json({ message: 'يجب تقديم معرّفي السؤالين (IDs).' });
+        }
+
+        const q1 = await Question.findById(question1Id);
+        const q2 = await Question.findById(question2Id);
+
+        if (!q1 || !q2) {
+            return res.status(404).json({ message: 'لم يتم العثور على سؤال واحد أو كلا السؤالين.' });
+        }
+
+        const tempImage = q1.image;
+        q1.image = q2.image;
+        q2.image = tempImage;
+
+        await q1.save();
+        await q2.save();
+
+        res.status(200).json({
+            message: `✅ تم تبديل الصور بنجاح بين السؤالين: ${question1Id} و ${question2Id}`,
+            updatedQ1: q1,
+            updatedQ2: q2
+        });
+
+    } catch (error) {
+        console.error('Error swapping images:', error);
+        res.status(500).json({
+            message: '❌ فشل في عملية تبديل الصور.',
+            error: error.message
+        });
+    }
+});
+
+
+app.post('/api/questions/swap-answer', async (req, res) => {
+    try {
+        // ... الكود الأصلي لتبديل الإجابة الصحيحة
+        const { questionId, newCorrectText } = req.body;
+
+        if (!questionId || !newCorrectText) {
+            return res.status(400).json({ message: 'يجب تقديم معرّف السؤال ونص الإجابة الصحيحة الجديدة.' });
+        }
+
+        const question = await Question.findById(questionId);
+
+        if (!question) {
+            return res.status(404).json({ message: 'لم يتم العثور على السؤال.' });
+        }
+
+        let foundNewCorrect = false;
+
+        const updatedOptions = question.options.map(option => {
+            let isCorrect = false;
+
+            if (option.text.trim() === newCorrectText.trim()) {
+                isCorrect = true;
+                foundNewCorrect = true;
+            }
+
+            return {
+                text: option.text,
+                isCorrect: isCorrect
+            };
+        });
+
+        if (!foundNewCorrect) {
+              return res.status(400).json({ message: '❌ لم يتم العثور على الخيار بالنص المحدد لتغييره إلى إجابة صحيحة.' });
+        }
+        
+        question.options = updatedOptions;
+        await question.save();
+
+        res.status(200).json({
+            message: `✅ تم تعيين "${newCorrectText}" كإجابة صحيحة جديدة للسؤال: ${questionId}`,
+            updatedQuestion: question
+        });
+
+    } catch (error) {
+        console.error('Error swapping correct answer:', error);
+        res.status(500).json({
+            message: '❌ فشل في عملية تبديل الإجابة الصحيحة.',
+            error: error.message
+        });
     }
 });
 

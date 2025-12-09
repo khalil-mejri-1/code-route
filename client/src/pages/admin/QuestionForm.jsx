@@ -31,14 +31,17 @@ const TOPIC_CATEGORIES = [
     "المخالفات و العقوبات",
 "السواق و العربات ",
     "الصيانة",
-    "المقاطعة و المجاوزة"
+    "المقاطعة و المجاوزة",
+"اسعافات اولية ",
+"مواد خطيرة ",
+"وقوف و توقف "
 ];
 
 // ⭐️⭐️ تعريف كائن البيانات المشتركة الافتراضي (للفئة ورقم السلسلة فقط)
 const DefaultMetaData = {
     nbSerie: '1', 
     category1: LICENSE_TYPES[0], 
-    category2: TOPIC_CATEGORIES[4], 
+    category2: TOPIC_CATEGORIES[7], 
 };
 
 

@@ -3,6 +3,7 @@
 import React from 'react'
 import Navbar from '../../comp/navbar.jsx';
 import QuestionForm from './QuestionForm.jsx';
+import Organiz_admin from './organiz_admin.jsx';
 export default function Home_admin() {
   return (
     <>
@@ -10,7 +11,7 @@ export default function Home_admin() {
     <br />
     <br />
 <QuestionForm/>
-        
+        <Organiz_admin/>
         <div>
 
     </div>
