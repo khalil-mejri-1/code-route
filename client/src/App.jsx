@@ -8,7 +8,9 @@ import SignUp from "./comp/SignUp"; // Import the new modal component
 import Courses from "./pages/cours.jsx"; // Import the new modal component
 import Examen from "./pages/examen.jsx"; // Import the new modal component
 import Cours_question from "./pages/cours_question.jsx"; // Import the new modal component
+import CoursSeries from "./pages/cours_series.jsx"; // ⭐️ New Component
 import Examen_question from "./pages/examen_question.jsx"; // Import the new modal component
+import ExamenSeries from './pages/examen_series'; // ⭐️ New Component
 import Contact from "./pages/contact.jsx"; // Import the new modal component
 import Subscriptions from "./pages/subscriptions.jsx"; // Import the new modal component
 import Serie from "./pages/serie.jsx"; // Import the new modal component
@@ -54,8 +56,12 @@ const App = () => {
           <Route path="/SignUp" element={<SignUp />} />
           <Route path="/courses" element={<Courses />} />
           <Route path="/examens" element={<Examen />} />
-          <Route path="/Cours_question" element={<Cours_question />} />
-          <Route path="/examen_question" element={<Examen_question />} />
+          <Route path="/cours/question" element={<Cours_question />} />
+          <Route path="/cours/series" element={<CoursSeries />} /> {/* ⭐️ New Route */}
+          <Route path="/Cours_question" element={<Cours_question />} /> {/* ⭐️ Legacy Support */}
+          <Route path="/examen/question" element={<Examen_question />} />
+          <Route path="/examen_question" element={<Examen_question />} /> {/* ⭐️ Legacy Support */}
+          <Route path="/examen/series" element={<ExamenSeries />} /> {/* ⭐️ New Route */}
           <Route path="/contact" element={<Contact />} />
           <Route path="/subscriptions" element={<Subscriptions />} />
           <Route path="/serie" element={<Serie />} />

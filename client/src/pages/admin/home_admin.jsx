@@ -7,15 +7,19 @@ import Organiz_admin from './organiz_admin.jsx';
 export default function Home_admin() {
   return (
     <>
-    <Navbar/>
-    <br />
-    <br />
-<QuestionForm/>
-        <Organiz_admin/>
-        <div>
+      <Navbar />
+      <br />
+      <br />
+      <QuestionForm />
+      <Organiz_admin />
 
-    </div>
+      <div>
+
+      </div>
+
+
     </>
+
 
   )
 }
