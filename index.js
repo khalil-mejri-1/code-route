@@ -1,15 +1,14 @@
-// index.js (ملف الخادم الرئيسي)
-
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors'); // لإتاحة الاتصال بين React و Node.js
 const Question = require('./models/Question.js'); // ⭐️ استيراد المخطط
+const User = require('./models/User.js'); // ⭐️ استيراد مخطط المستخدم
 
 const app = express();
 const port = 3000;
 
 // 1. **Replace the placeholder with your actual URI string**
-const MONGO_URI = "mongodb+srv://coderoute:khalilslam1234@cluster0.o1dasfi.mongodb.net/DriveCodeDB?retryWrites=true&w=majority"; 
+const MONGO_URI = "mongodb+srv://coderoute:khalilslam1234@cluster0.o1dasfi.mongodb.net/DriveCodeDB?retryWrites=true&w=majority";
 // تأكد من استبدال YourDatabaseName بالاسم الفعلي لقاعدة البيانات
 
 // --- Middlewares ---
@@ -22,12 +21,85 @@ const connectDB = async () => {
         console.log('✅ MongoDB connected successfully!');
     } catch (error) {
         console.error('❌ MongoDB connection error:', error.message);
-        process.exit(1); 
+        process.exit(1);
     }
 };
 
 // Start the database connection
+
+// Start the database connection
 connectDB();
+
+// ------------------------------------------------------------------
+// ⭐️⭐️ AUTH ROUTES (مسارات المصادقة) ⭐️⭐️
+// ------------------------------------------------------------------
+
+// 1. تسجيل مستخدم جديد (Sign Up)
+app.post('/api/auth/signup', async (req, res) => {
+    try {
+        const { fullName, email, password } = req.body;
+
+        // التحقق من وجود المستخدم
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(400).json({ message: 'البريد الإلكتروني مسجل مسبقاً.' });
+        }
+
+        // إنشاء مستخدم جديد (ملاحظة: في الإنتاج يجب تشفير كلمة المرور باستخدام bcrypt)
+        const newUser = new User({
+            fullName,
+            email,
+            password
+        });
+
+        await newUser.save();
+
+        res.status(201).json({
+            message: 'تم إنشاء الحساب بنجاح!',
+            user: {
+                id: newUser._id,
+                fullName: newUser.fullName,
+                email: newUser.email
+            }
+        });
+
+    } catch (error) {
+        console.error('Signup Error:', error);
+        res.status(500).json({ message: 'حدث خطأ أثناء إنشاء الحساب', error: error.message });
+    }
+});
+
+// 2. تسجيل الدخول (Login)
+app.post('/api/auth/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+
+        // البحث عن المستخدم
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(400).json({ message: 'البريد الإلكتروني أو كلمة المرور غير صحيحة.' });
+        }
+
+        // التحقق من كلمة المرور (مقارنة مباشرة للنص، يجب استخدام التشفير في التطبيقات الحقيقية)
+        if (user.password !== password) {
+            return res.status(400).json({ message: 'البريد الإلكتروني أو كلمة المرور غير صحيحة.' });
+        }
+
+        // نجاح تسجيل الدخول
+        res.status(200).json({
+            message: 'تم تسجيل الدخول بنجاح!',
+            user: {
+                id: user._id,
+                fullName: user.fullName,
+                email: user.email
+            }
+        });
+
+    } catch (error) {
+        console.error('Login Error:', error);
+        res.status(500).json({ message: 'حدث خطأ أثناء تسجيل الدخول', error: error.message });
+    }
+});
 
 
 // --- مسار API لإنشاء سؤال واحد ---
@@ -35,7 +107,7 @@ app.post('/api/quiz/questions', async (req, res) => {
     try {
         // ⭐️⭐️ استقبال الحقوق المنفصلة مباشرة من req.body
         const { question, image, category1, category2, nb_serie, options } = req.body;
-        
+
         // بناء كائن السؤال الجديد
         const questionData = {
             question,
@@ -45,27 +117,27 @@ app.post('/api/quiz/questions', async (req, res) => {
             category1: category1.trim(), // تنظيف
             category2: category2.trim(), // تنظيف
         };
-        
-        const newQuestion = new Question(questionData); 
-        
+
+        const newQuestion = new Question(questionData);
+
         const savedQuestion = await newQuestion.save();
-        
-        res.status(201).json({ 
-            message: 'تم إضافة السؤال بنجاح!', 
-            question: savedQuestion 
+
+        res.status(201).json({
+            message: 'تم إضافة السؤال بنجاح!',
+            question: savedQuestion
         });
 
     } catch (error) {
-        res.status(400).json({ 
-            message: 'فشل في إضافة السؤال.', 
-            error: error.message 
+        res.status(400).json({
+            message: 'فشل في إضافة السؤال.',
+            error: error.message
         });
     }
 });
 
 
 // --- مسار API لإضافة الأسئلة بالجملة (Batch Create) ---
-app.post('/api/quiz/questions/batch', async (req, res) => { 
+app.post('/api/quiz/questions/batch', async (req, res) => {
     try {
         // التحقق مما إذا كان المدخل مصفوفة
         const questionsArray = Array.isArray(req.body) ? req.body : [req.body];
@@ -73,7 +145,7 @@ app.post('/api/quiz/questions/batch', async (req, res) => {
         if (questionsArray.length === 0) {
             return res.status(400).json({ message: 'الرجاء إرسال مصفوفة من الأسئلة لإضافة دفعة.' });
         }
-        
+
         // تجهيز بيانات الأسئلة وتحويل نوع البيانات لـ nb_serie
         const processedQuestions = questionsArray.map(q => ({
             question: q.question,
@@ -85,16 +157,16 @@ app.post('/api/quiz/questions/batch', async (req, res) => {
         }));
 
         // استخدام insertMany لإضافة مجموعة الأسئلة دفعة واحدة
-        const savedQuestions = await Question.insertMany(processedQuestions); 
-        
-        res.status(201).json({ 
-            message: `تم إضافة ${savedQuestions.length} سؤال بنجاح!`, 
-            questions: savedQuestions 
+        const savedQuestions = await Question.insertMany(processedQuestions);
+
+        res.status(201).json({
+            message: `تم إضافة ${savedQuestions.length} سؤال بنجاح!`,
+            questions: savedQuestions
         });
 
     } catch (error) {
-        res.status(400).json({ 
-            message: 'فشل في إضافة بعض أو كل الأسئلة. تحقق من متطلبات الحقول (مثل category1 و nb_serie).', 
+        res.status(400).json({
+            message: 'فشل في إضافة بعض أو كل الأسئلة. تحقق من متطلبات الحقول (مثل category1 و nb_serie).',
             error: error.message,
         });
     }
@@ -103,19 +175,19 @@ app.post('/api/quiz/questions/batch', async (req, res) => {
 // --- مسار API لجلب الأسئلة (مع الفلترة) ---
 app.get('/api/quiz/questions', async (req, res) => {
     try {
-        const { category1, category2, nb_serie } = req.query; 
+        const { category1, category2, nb_serie } = req.query;
 
         const query = {};
-        
+
         if (category1) {
-            query.category1 = category1.trim(); 
+            query.category1 = category1.trim();
         }
         if (category2) {
-            query.category2 = category2.trim(); 
+            query.category2 = category2.trim();
         }
-        
+
         if (nb_serie) {
-            query.nb_serie = parseInt(nb_serie); 
+            query.nb_serie = parseInt(nb_serie);
         }
 
         // جلب الأسئلة
@@ -142,6 +214,33 @@ app.get('/api/questions', async (req, res) => {
 });
 
 
+// ⭐️⭐️ NEW ENDPOINT: جلب أرقام السلاسل المتاحة لفئة معينة ⭐️⭐️
+app.get('/api/quiz/series', async (req, res) => {
+    try {
+        const { category1, category2 } = req.query;
+
+        if (!category1 || !category2) {
+            return res.status(400).json({ message: 'يجب تقديم الفئة 1 والفئة 2.' });
+        }
+
+        // البحث عن أرقام السلاسل الفريدة
+        const series = await Question.distinct('nb_serie', {
+            category1: category1.trim(),
+            category2: category2.trim()
+        });
+
+        // ترتيب السلاسل تصاعدياً
+        series.sort((a, b) => a - b);
+
+        res.status(200).json(series);
+
+    } catch (error) {
+        console.error('Error fetching series:', error);
+        res.status(500).json({ message: 'فشل في جلب السلاسل المتاحة.', error: error.message });
+    }
+});
+
+
 // ------------------------------------------------------------------
 // ⭐️⭐️ NEW ENDPOINT: تحديث سؤال محدد (UPDATE) ⭐️⭐️
 // ------------------------------------------------------------------
@@ -157,9 +256,9 @@ app.put('/api/questions/:id', async (req, res) => {
 
         // خيار runValidators: true يضمن تطبيق قواعد التحقق من المخطط (Schema)
         const updatedQuestion = await Question.findByIdAndUpdate(
-            id, 
-            updateData, 
-            { new: true, runValidators: true } 
+            id,
+            updateData,
+            { new: true, runValidators: true }
         );
 
         if (!updatedQuestion) {
@@ -174,9 +273,9 @@ app.put('/api/questions/:id', async (req, res) => {
     } catch (error) {
         // التحقق من أخطاء التحقق من الصحة (Validation errors)
         if (error.name === 'ValidationError') {
-            return res.status(400).json({ 
-                message: 'فشل في التحقق من صحة البيانات أثناء التحديث.', 
-                error: error.message 
+            return res.status(400).json({
+                message: 'فشل في التحقق من صحة البيانات أثناء التحديث.',
+                error: error.message
             });
         }
         console.error('Error updating question:', error);
@@ -289,9 +388,9 @@ app.post('/api/questions/swap-answer', async (req, res) => {
         });
 
         if (!foundNewCorrect) {
-              return res.status(400).json({ message: '❌ لم يتم العثور على الخيار بالنص المحدد لتغييره إلى إجابة صحيحة.' });
+            return res.status(400).json({ message: '❌ لم يتم العثور على الخيار بالنص المحدد لتغييره إلى إجابة صحيحة.' });
         }
-        
+
         question.options = updatedOptions;
         await question.save();
 
