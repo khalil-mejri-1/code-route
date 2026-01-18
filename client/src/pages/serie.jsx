@@ -156,7 +156,7 @@ export default function Serie() {
 
         setLoading(true);
         try {
-            await axios.put(`http://localhost:3000/api/questions/${currentQuestion._id}`, {
+            await axios.put(`https://code-route-rho.vercel.app//api/questions/${currentQuestion._id}`, {
                 options: updatedOptions
             });
 

@@ -6,7 +6,7 @@ import axios from 'axios';
 const IMGBB_API_KEY = '4a45d9a01860c9fdd4642c1d51b46995';
 const IMGBB_UPLOAD_URL = 'https://api.imgbb.com/1/upload';
 const API_BASE_URL = window.location.hostname === 'localhost'
-    ? 'http://localhost:3000/api'
+    ? 'https://code-route-rho.vercel.app//api'
     : 'https://code-route-rho.vercel.app/api';
 const API_URL_BATCH = `${API_BASE_URL}/quiz/questions/batch`;
 

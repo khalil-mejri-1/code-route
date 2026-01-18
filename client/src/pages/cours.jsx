@@ -76,7 +76,7 @@ export default function Cours() {
     useEffect(() => {
         const fetchCategories = async () => {
             try {
-                const response = await axios.get('http://localhost:3000/api/categories');
+                const response = await axios.get('https://code-route-rho.vercel.app//api/categories');
                 setLicenseCategories(response.data);
             } catch (error) {
                 console.error('Error fetching categories:', error);

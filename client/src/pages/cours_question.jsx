@@ -74,7 +74,7 @@ export default function Cours_question() {
     useEffect(() => {
         const fetchTopics = async () => {
             try {
-                const response = await axios.get(`http://localhost:3000/api/topics?category=${encodeURIComponent(mainCategory)}`);
+                const response = await axios.get(`https://code-route-rho.vercel.app//api/topics?category=${encodeURIComponent(mainCategory)}`);
                 setTopics(response.data);
             } catch (error) {
                 console.error('Error fetching topics:', error);

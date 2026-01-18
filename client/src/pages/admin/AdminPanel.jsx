@@ -31,7 +31,7 @@ const AdminPanel = () => {
 
     const fetchCategories = async () => {
         try {
-            const res = await axios.get('http://localhost:3000/api/categories');
+            const res = await axios.get('https://code-route-rho.vercel.app//api/categories');
             setCategories(res.data);
         } catch (err) {
             console.error(err);
@@ -40,7 +40,7 @@ const AdminPanel = () => {
 
     const fetchTopics = async () => {
         try {
-            const res = await axios.get('http://localhost:3000/api/topics');
+            const res = await axios.get('https://code-route-rho.vercel.app//api/topics');
             setTopics(res.data);
         } catch (err) {
             console.error(err);
@@ -49,7 +49,7 @@ const AdminPanel = () => {
 
     const fetchUsers = async () => {
         try {
-            const res = await axios.get('http://localhost:3000/api/users');
+            const res = await axios.get('https://code-route-rho.vercel.app//api/users');
             setUsers(res.data);
         } catch (err) {
             console.error(err);
@@ -60,7 +60,7 @@ const AdminPanel = () => {
         e.preventDefault();
         setLoading(true);
         try {
-            await axios.post('http://localhost:3000/api/categories', newCategory);
+            await axios.post('https://code-route-rho.vercel.app//api/categories', newCategory);
             setMessage('تم إضافة الصنف بنجاح');
             setNewCategory({ category: '', description: '', image: '' });
             fetchCategories();
@@ -80,7 +80,7 @@ const AdminPanel = () => {
         }
         setLoading(true);
         try {
-            await axios.post('http://localhost:3000/api/topics', newTopic);
+            await axios.post('https://code-route-rho.vercel.app//api/topics', newTopic);
             setMessage('تم إضافة الموضوع بنجاح');
             const currentCat = newTopic.category;
             setNewTopic({ name: '', category: currentCat, image: '' });
@@ -96,7 +96,7 @@ const AdminPanel = () => {
     const handleDeleteCategory = async (id) => {
         if (window.confirm('هل أنت متأكد من حذف هذا الصنف؟')) {
             try {
-                await axios.delete(`http://localhost:3000/api/categories/${id}`);
+                await axios.delete(`https://code-route-rho.vercel.app//api/categories/${id}`);
                 fetchCategories();
             } catch (err) {
                 alert('فشل في الحذف');
@@ -107,7 +107,7 @@ const AdminPanel = () => {
     const handleDeleteTopic = async (id) => {
         if (window.confirm('هل أنت متأكد من حذف هذا الموضوع؟')) {
             try {
-                await axios.delete(`http://localhost:3000/api/topics/${id}`);
+                await axios.delete(`https://code-route-rho.vercel.app//api/topics/${id}`);
                 fetchTopics();
             } catch (err) {
                 alert('فشل في الحذف');
@@ -124,8 +124,8 @@ const AdminPanel = () => {
         setLoading(true);
         const { type, data } = editingItem;
         const url = type === 'category'
-            ? `http://localhost:3000/api/categories/${data._id}`
-            : `http://localhost:3000/api/topics/${data._id}`;
+            ? `https://code-route-rho.vercel.app//api/categories/${data._id}`
+            : `https://code-route-rho.vercel.app//api/topics/${data._id}`;
 
         try {
             await axios.put(url, data);
