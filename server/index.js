@@ -15,8 +15,9 @@ const MONGO_URI = "mongodb+srv://coderoute:khalilslam1234@cluster0.o1dasfi.mongo
 
 // --- Middlewares ---
 app.use(express.json()); // لتمكين قراءة بيانات JSON المرسلة من React
-app.use(cors()); // السماح لمتصفح React بالوصول إلى الخادم
-
+app.use(cors({
+    origin: "*"
+}));
 const connectDB = async () => {
     try {
         await mongoose.connect(MONGO_URI);
