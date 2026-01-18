@@ -3,6 +3,8 @@ const mongoose = require('mongoose');
 const cors = require('cors'); // لإتاحة الاتصال بين React و Node.js
 const Question = require('./models/Question.js'); // ⭐️ استيراد المخطط
 const User = require('./models/User.js'); // ⭐️ استيراد مخطط المستخدم
+const Category = require('./models/Category.js'); // ⭐️ استيراد مخطط الفئات
+const Topic = require('./models/Topic.js'); // ⭐️ استيراد مخطط المواضيع
 
 const app = express();
 const port = 3000;
@@ -287,6 +289,25 @@ app.put('/api/questions/:id', async (req, res) => {
 });
 
 // ------------------------------------------------------------------
+// ⭐️⭐️ NEW ENDPOINT: حذف جميع الأسئلة (DELETE ALL) ⭐️⭐️
+// ------------------------------------------------------------------
+app.delete('/api/questions/all', async (req, res) => {
+    try {
+        const result = await Question.deleteMany({});
+        res.status(200).json({
+            message: `✅ تم حذف جميع الأسئلة بنجاح! عدد الأسئلة المحذوفة: ${result.deletedCount}`,
+            deletedCount: result.deletedCount
+        });
+    } catch (error) {
+        console.error('Error deleting all questions:', error);
+        res.status(500).json({
+            message: '❌ فشل في عملية حذف جميع الأسئلة.',
+            error: error.message
+        });
+    }
+});
+
+// ------------------------------------------------------------------
 // ⭐️⭐️ NEW ENDPOINT: حذف سؤال محدد (DELETE) ⭐️⭐️
 // ------------------------------------------------------------------
 app.delete('/api/questions/:id', async (req, res) => {
@@ -314,8 +335,158 @@ app.delete('/api/questions/:id', async (req, res) => {
 });
 // ------------------------------------------------------------------
 
+// ------------------------------------------------------------------
+
 
 // --- مسارات موجودة سابقاً (تبديل الصور والإجابات) ---
+
+// ------------------------------------------------------------------
+// ⭐️⭐️ USERS & CATEGORIES ROUTES ⭐️⭐️
+// ------------------------------------------------------------------
+
+// 1. جلب قائمة جميع المستخدمين
+app.get('/api/users', async (req, res) => {
+    try {
+        const users = await User.find({}, '-password'); // استثناء كلمة المرور للأمان
+        res.status(200).json(users);
+    } catch (error) {
+        res.status(500).json({ message: 'فشل في جلب المستخدمين', error: error.message });
+    }
+});
+
+// 2. جلب جميع الفئات
+app.get('/api/categories', async (req, res) => {
+    try {
+        let categories = await Category.find({});
+
+        // إذا كانت القائمة فارغة، يمكننا إضافة الفئات الافتراضية
+        if (categories.length === 0) {
+            const defaultCategories = [
+                { category: "B", description: "دروس في B", image: "https://www.codedelaroute.tn/images/b.png" },
+                { category: "A / A1", description: "دروس في A / A1", image: "https://www.codedelaroute.tn/images/a.png" },
+                { category: "A1 / AM", description: "دروس في A1 / AM", image: "https://www.codedelaroute.tn/images/a1.png" },
+                { category: "B+E", description: "دروس في B+E", image: "https://www.codedelaroute.tn/images/b+e.png" },
+                { category: "C / C1", description: "دروس في C / C1", image: "https://www.codedelaroute.tn/images/c.png" },
+                { category: "C+E / C1+E", description: "دروس في C+E / C1+E", image: "https://www.codedelaroute.tn/images/c+e.png" },
+                { category: "D", description: "دروس في D", image: "https://www.codedelaroute.tn/images/d.png" },
+                { category: "D1", description: "دروس في D1", image: "https://www.codedelaroute.tn/images/d1.png" },
+                { category: "D+E / D1+E", description: "دروس في D+E / D1+E", image: "https://www.codedelaroute.tn/images/d+e.png" },
+            ];
+            categories = await Category.insertMany(defaultCategories);
+        }
+
+        res.status(200).json(categories);
+    } catch (error) {
+        res.status(500).json({ message: 'فشل في جلب الفئات', error: error.message });
+    }
+});
+
+// 3. إضافة فئة جديدة
+app.post('/api/categories', async (req, res) => {
+    try {
+        const { category, description, image } = req.body;
+        const newCategory = new Category({ category, description, image });
+        await newCategory.save();
+        res.status(201).json({ message: 'تم إضافة الفئة بنجاح!', category: newCategory });
+    } catch (error) {
+        res.status(400).json({ message: 'فشل في إضافة الفئة', error: error.message });
+    }
+});
+
+// 4. حذف فئة
+app.delete('/api/categories/:id', async (req, res) => {
+    try {
+        await Category.findByIdAndDelete(req.params.id);
+        res.status(200).json({ message: 'تم حذف الفئة بنجاح!' });
+    } catch (error) {
+        res.status(500).json({ message: 'فشل في حذف الفئة', error: error.message });
+    }
+});
+
+// 5. تحديث فئة
+app.put('/api/categories/:id', async (req, res) => {
+    try {
+        const updatedCategory = await Category.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        res.status(200).json({ message: 'تم تحديث الفئة بنجاح!', category: updatedCategory });
+    } catch (error) {
+        res.status(400).json({ message: 'فشل في تحديث الفئة', error: error.message });
+    }
+});
+
+// ------------------------------------------------------------------
+// ⭐️⭐️ TOPICS ROUTES (المواضيع الفرعية) ⭐️⭐️
+// ------------------------------------------------------------------
+
+// 1. جلب المواضيع (مع إمكانية الفلترة حسب الفئة)
+app.get('/api/topics', async (req, res) => {
+    try {
+        const { category } = req.query;
+
+        // تحديث المواضيع القديمة التي ليس لها فئة لتتبع الفئة "B" افتراضياً
+        await Topic.updateMany({ category: { $exists: false } }, { $set: { category: "B" } });
+        await Topic.updateMany({ category: "" }, { $set: { category: "B" } });
+
+        const query = category ? { category } : {};
+        let topics = await Topic.find(query);
+
+        // إذا كانت القائمة فارغة تماماً في قاعدة البيانات، إضافة مواضيع افتراضية
+        const allTopicsCount = await Topic.countDocuments();
+        if (allTopicsCount === 0) {
+            const defaultTopics = [
+                { name: "العلامات و الاشارات", category: "B", image: "https://i.pinimg.com/originals/54/83/72/5483725409b8436c9256c141723999da.gif" },
+                { name: "الأولوية", category: "B", image: "https://www.codepermis.net/upload/images/image.jpg" },
+                { name: "قواعد الجولان", category: "B", image: "https://www.codepermis.net/upload/images/en1g5vqv.jpg" },
+                { name: "المخالفات و العقوبات", category: "B", image: "https://www.almuraba.net/wp-content/uploads/2024/05/%D9%83%D9%85-%D9%85%D8%AE%D8%A7%D9%84%D9%81%D8%A9-%D8%A7%D9%84%D8%AC%D9%88%D8%A7%D9%84.jpg" },
+                { name: "الصيانة", category: "B", image: "https://elsafacarservice.com/wp-content/uploads/2024/08/%D9%85%D8%A7-%D9%87%D9%8A-%D8%A3%D9%86%D9%88%D8%A7%D8%B9-%D8%B5%D9%8A%D8%A7%D9%86%D8%A9-%D8%A7%D9%84%D8%B3%D9%8A%D8%A7%D8%B1%D8%A7%D8%AA.webp" },
+                { name: "المقاطعة و المجاوزة", category: "B", image: "https://www.codepermis.net/upload/images/s7300318.gif" },
+            ];
+            topics = await Topic.insertMany(defaultTopics);
+            // إذا كان المستخدم يطلب فئة معينة، نفلتر النتائج بعد الإضافة
+            if (category) {
+                topics = topics.filter(t => t.category === category);
+            }
+        }
+
+        res.status(200).json(topics);
+    } catch (error) {
+        res.status(500).json({ message: 'فشل في جلب المواضيع', error: error.message });
+    }
+});
+
+// 2. إضافة موضوع جديد
+app.post('/api/topics', async (req, res) => {
+    try {
+        const { name, category, image } = req.body;
+        if (!name || !category) {
+            return res.status(400).json({ message: 'الاسم والفئة مطلوبان' });
+        }
+        const newTopic = new Topic({ name, category, image });
+        await newTopic.save();
+        res.status(201).json({ message: 'تم إضافة الموضوع بنجاح!', topic: newTopic });
+    } catch (error) {
+        res.status(400).json({ message: 'فشل في إضافة الموضوع', error: error.message });
+    }
+});
+
+// 3. حذف موضوع
+app.delete('/api/topics/:id', async (req, res) => {
+    try {
+        await Topic.findByIdAndDelete(req.params.id);
+        res.status(200).json({ message: 'تم حذف الموضوع بنجاح!' });
+    } catch (error) {
+        res.status(500).json({ message: 'فشل في حذف الموضوع', error: error.message });
+    }
+});
+
+// 4. تحديث موضوع
+app.put('/api/topics/:id', async (req, res) => {
+    try {
+        const updatedTopic = await Topic.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        res.status(200).json({ message: 'تم تحديث الموضوع بنجاح!', topic: updatedTopic });
+    } catch (error) {
+        res.status(400).json({ message: 'فشل في تحديث الموضوع', error: error.message });
+    }
+});
 
 app.post('/api/questions/swap-images', async (req, res) => {
     try {
