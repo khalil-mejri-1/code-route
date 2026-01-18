@@ -1,13 +1,13 @@
 // src/pages/Serie.js
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Navbar from '../comp/navbar';
 import { FaChevronRight, FaChevronLeft, FaTimesCircle, FaCheckCircle } from 'react-icons/fa';
 import { useLocation } from 'react-router-dom';
 import axios from 'axios';
 // تأكد من وجود ملف Serie.css لاستخدام الأنماط
 
-const API_URL = 'http://localhost:3000/api/quiz/questions';
+const API_URL = 'https://code-route-rho.vercel.app/api/quiz/questions';
 const FREE_TRIAL_LIMIT = 3;
 
 // ⭐️ دالة مساعدة لتجزئة الباراميتر المدمج
@@ -34,11 +34,23 @@ const parseCategoryParam = (param) => {
 
 export default function Serie() {
     const location = useLocation();
+    const scrollRef = useRef(null);
 
     const [quizData, setQuizData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+    const [showEditModal, setShowEditModal] = useState(false); // ⭐️ حالة النافذة المنبثقة
+
+    // Scroll active question into view
+    useEffect(() => {
+        if (scrollRef.current) {
+            const activeBtn = scrollRef.current.querySelector('.active-lesson');
+            if (activeBtn) {
+                activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            }
+        }
+    }, [currentQuestionIndex]);
 
     // ملاحظة: تم إزالة تطبيق slice هنا. سيتم تطبيق الحد لاحقاً فقط على التنقل.
     const isSubscribed = localStorage.getItem('subscriptions') === 'true';
@@ -130,6 +142,40 @@ export default function Serie() {
     // --- استخراج وتجزئة بيانات الفئة من الـ URL (للعرض) ---
     const { category1: mainCategory, category2: currentTopic } = parseCategoryParam(new URLSearchParams(location.search).get('category') || '');
 
+    // ⭐️ دالة لفتح نافذة التعديل
+    const handleEditCorrectAnswer = () => {
+        setShowEditModal(true);
+    };
+
+    // ⭐️ دالة لتحديث الإجابة في قاعدة البيانات
+    const updateCorrectAnswer = async (newIndex) => {
+        const updatedOptions = currentQuestion.options.map((opt, idx) => ({
+            ...opt,
+            isCorrect: idx === newIndex
+        }));
+
+        setLoading(true);
+        try {
+            await axios.put(`http://localhost:3000/api/questions/${currentQuestion._id}`, {
+                options: updatedOptions
+            });
+
+            // تحديث الواجهة فوراً
+            const updatedQuizData = [...quizData];
+            updatedQuizData[currentQuestionIndex] = {
+                ...currentQuestion,
+                options: updatedOptions
+            };
+            setQuizData(updatedQuizData);
+            setShowEditModal(false);
+        } catch (err) {
+            console.error("Update Error:", err);
+            alert("❌ فشل في تحديث الإجابة.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
 
     // --- عرض حالة التحميل والخطأ ---
     if (loading) {
@@ -163,10 +209,33 @@ export default function Serie() {
         <>
             <Navbar />
             <div className="quiz-container">
+                {/* ⭐️ نافذة تعديل الإجابة بتصميم جميل */}
+                {showEditModal && (
+                    <div className="modern-modal-overlay">
+                        <div className="modern-modal-content">
+                            <h3>اختر الإجابة الصحيحة الجديدة</h3>
+                            <div className="answer-selection-grid">
+                                {['أ', 'ب', 'ج'].map((letter, idx) => (
+                                    <button
+                                        key={idx}
+                                        className={`selection-circle ${currentQuestion.options[idx]?.isCorrect ? 'current-active' : ''}`}
+                                        onClick={() => updateCorrectAnswer(idx)}
+                                    >
+                                        {letter}
+                                    </button>
+                                ))}
+                            </div>
+                            <button className="close-modal-btn" onClick={() => setShowEditModal(false)}>إلغاء</button>
+                        </div>
+                    </div>
+                )}
+
                 <div className="quiz-header">
                     <h2>درس رخصة القيادة: {mainCategory} - {currentTopic}</h2>
                     {/* نستخدم totalQuestions لعدد الدروس الكلي ونعرض الحد التجريبي إذا لم يكن مشتركاً */}
-                    <p>الدرس {currentQuestionIndex + 1} من {totalQuestions}</p>
+                    {/* <p>الدرس {currentQuestionIndex + 1} من {totalQuestions}</p> */}
+                    <h3>Serie {(new URLSearchParams(location.search).get('nb_serie') || '1')}</h3>
+
                 </div>
 
                 <div className="quiz-content-wrapper">
@@ -175,7 +244,7 @@ export default function Serie() {
                     <div className="answer-sheet">
                         <div className="lesson-numbers-list">
                             <h4>أرقام الدروس</h4>
-                            <div className="lesson-buttons-grid">
+                            <div className="lesson-buttons-grid" ref={scrollRef}>
                                 {/* ⭐️ تم التعديل: التكرار على جميع الأسئلة لجعل جميع الأزرار مرئية */}
                                 {quizData.map((_, index) => {
                                     // تحديد ما إذا كان الدرس محجوبًا
@@ -249,14 +318,34 @@ export default function Serie() {
                                 {/* إخفاء الإجابة في الدروس المحجوبة */}
                                 {isCurrentLessonLocked ? '🔒' : getCorrectAnswerLetter()}
                             </span>
+
+                            {/* زر التعديل للمسؤول */}
+                            {!isCurrentLessonLocked && (
+                                <button
+                                    className="edit-answer-btn"
+                                    onClick={handleEditCorrectAnswer}
+                                    style={{
+                                        marginTop: '10px',
+                                        padding: '5px 10px',
+                                        fontSize: '12px',
+                                        backgroundColor: '#f39c12',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '4px',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    تعديل الإجابة
+                                </button>
+                            )}
                         </div>
 
-                        <div className="question-info">
+                        {/* <div className="question-info">
                             <p>{mainCategory} و {currentTopic}</p>
                             <p>Serie {(new URLSearchParams(location.search).get('nb_serie') || '1')}</p>
-                        </div>
+                        </div> */}
 
-                        <button className="reveal-button disabled-button" disabled>استقبال</button>
+                        {/* <button className="reveal-button disabled-button" disabled>استقبال</button> */}
 
                         {/* رسالة الحجب - تم نقلها الآن إلى شاشة أكبر */}
                     </div>

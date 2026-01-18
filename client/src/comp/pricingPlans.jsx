@@ -9,7 +9,7 @@ const pricingPlans = [
   {
     name: 'شهري',
     tagline: 'وصول كامل لمدة شهر واحد',
-    price: '9.99',
+    price: '99',
     currency: 'دينار تونسي',
     features: [
       { text: 'الوصول إلى جميع الدروس', included: true },
@@ -20,7 +20,7 @@ const pricingPlans = [
     buttonText: 'اشترك',
     highlight: true,
   },
- 
+
 ];
 
 const PricingCard = ({ plan }) => {
@@ -64,15 +64,15 @@ const PricingSection = () => {
         <h2 className="pricing-title">خطط الاشتراك</h2>
         <p className="pricing-subtitle">اختر الخطة المناسبة لك</p>
       </div>
-<Link style={{textDecoration:"none"}} to="/subscriptions">
-  <div className="pricing-grid">
-        {pricingPlans.map((plan, index) => (
-          <PricingCard key={index} plan={plan} />
-        ))}
-      </div>
+      <Link style={{ textDecoration: "none" }} to="/subscriptions">
+        <div className="pricing-grid">
+          {pricingPlans.map((plan, index) => (
+            <PricingCard key={index} plan={plan} />
+          ))}
+        </div>
 
-</Link>
-    
+      </Link>
+
     </div>
   );
 };

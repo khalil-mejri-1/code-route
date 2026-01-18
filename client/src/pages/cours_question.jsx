@@ -1,18 +1,9 @@
-// src/pages/Cours_question.js (ملف الدروس - المواضيع)
+// src/pages/cours_question.jsx (ملف الدروس - المواضيع)
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import Navbar from '../comp/navbar';
-
-// 1. البيانات
-const licenseCategories = [
-    { id: 1, category: "العلامات و الاشارات", image: "https://i.pinimg.com/originals/54/83/72/5483725409b8436c9256c141723999da.gif" },
-    { id: 2, category: "الأولوية", image: "https://www.codepermis.net/upload/images/image.jpg" },
-    { id: 3, category: "قواعد الجولان", image: "https://www.codepermis.net/upload/images/en1g5vqv.jpg" },
-    { id: 4, category: "المخالفات و العقوبات", image: "https://www.almuraba.net/wp-content/uploads/2024/05/%D9%83%D9%85-%D9%85%D8%AE%D8%A7%D9%84%D9%81%D8%A9-%D8%A7%D9%84%D8%AC%D9%88%D8%A7%D9%84.jpg" },
-    { id: 5, category: "الصيانة", image: "https://elsafacarservice.com/wp-content/uploads/2024/08/%D9%85%D8%A7-%D9%87%D9%8A-%D8%A3%D9%86%D9%88%D8%A7%D8%B9-%D8%B5%D9%8A%D8%A7%D9%86%D8%A9-%D8%A7%D9%84%D8%B3%D9%8A%D8%A7%D8%B1%D8%A7%D8%AA.webp" },
-    { id: 6, category: "المقاطعة و المجاوزة", image: "https://www.codepermis.net/upload/images/s7300318.gif" },
-];
+import axios from 'axios';
 
 // 2. مكون البطاقة الفردية (CardComponent)
 function CardComponent({ id, category, image, isLoggedIn, isSubscribed, mainCategory }) {
@@ -70,13 +61,33 @@ function CardComponent({ id, category, image, isLoggedIn, isSubscribed, mainCate
 
 // 3. المكون الرئيسي (Cours_question)
 export default function Cours_question() {
+    const [topics, setTopics] = useState([]);
+    const [loading, setLoading] = useState(true);
     const isLoggedIn = localStorage.getItem('login') === 'true';
     const isSubscribed = localStorage.getItem('subscriptions') === 'true';
     const location = useLocation();
 
     // ⭐️ استخراج الفئة الرئيسية (مثلاً: B أو A / A1)
     const urlParams = new URLSearchParams(location.search);
-    const mainCategory = urlParams.get('category') || 'B'; // نفترض أن الصفحة السابقة أرسلت الفئة الرئيسية في 'category'
+    const mainCategory = urlParams.get('category') || 'B';
+
+    useEffect(() => {
+        const fetchTopics = async () => {
+            try {
+                const response = await axios.get(`http://localhost:3000/api/topics?category=${encodeURIComponent(mainCategory)}`);
+                setTopics(response.data);
+            } catch (error) {
+                console.error('Error fetching topics:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchTopics();
+    }, [mainCategory]);
+
+    if (loading) {
+        return <div style={{ color: 'white', textAlign: 'center', marginTop: '50px' }}>جاري التحميل...</div>;
+    }
 
     return (
         <>
@@ -85,15 +96,15 @@ export default function Cours_question() {
                 ({mainCategory}) اختَر الموضوع الذي تريد دراسته
             </h2>
             <div className="cards-grid-container">
-                {licenseCategories.map((item) => (
+                {topics.map((item, index) => (
                     <CardComponent
-                        key={item.id}
-                        id={item.id}
-                        category={item.category}
+                        key={item._id || index}
+                        id={index + 1}
+                        category={item.name}
                         image={item.image}
                         isLoggedIn={isLoggedIn}
-                        isSubscribed={isSubscribed} // تمرير حالة الاشتراك
-                        mainCategory={mainCategory} // الفئة الرئيسية المقتبسة من الـ URL
+                        isSubscribed={isSubscribed}
+                        mainCategory={mainCategory}
                     />
                 ))}
             </div>

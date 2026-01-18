@@ -21,7 +21,7 @@ const licenseCategories = [
 
 // 2. مكون البطاقة الفردية (تم تحديثه لإضافة منطق التعطيل)
 function CardComponent({ id, category, description, image, isLoggedIn, isSubscribed }) {
-    
+
     let isCardDisabled;
     let overlayMessage;
 
@@ -42,12 +42,12 @@ function CardComponent({ id, category, description, image, isLoggedIn, isSubscri
 
 
     const cardClassName = `card-link ${isCardDisabled ? 'card-disabled' : ''}`;
-    
+
     // استخدام المكون Link فقط إذا لم تكن البطاقة معطلة
     const Wrapper = isCardDisabled ? 'div' : Link;
-    
+
     // التوجيه إلى /examen_question وإرسال الفئة
-    const linkProps = !isCardDisabled 
+    const linkProps = !isCardDisabled
         ? { to: `/examen_question?category=${encodeURIComponent(category)}` }
         : {};
 
@@ -62,18 +62,18 @@ function CardComponent({ id, category, description, image, isLoggedIn, isSubscri
                         className="card-image"
                         // إضافة خاصية لضمان عرض صور placeholder في حالة فشل تحميل الصورة
                         onError={(e) => {
-                            e.target.onerror = null; 
-                            e.target.src="https://placehold.co/100x100/CCCCCC/000000?text=صورة+غير+متوفرة";
+                            e.target.onerror = null;
+                            e.target.src = "https://placehold.co/100x100/CCCCCC/000000?text=صورة+غير+متوفرة";
                         }}
                     />
                 </div>
                 <div className="card-info">
                     <h3 className="card-category">الفئة: {category}</h3>
                     {/* تغيير كلمة "دروس" إلى "اختبارات" في الوصف */}
-                    <p className="card-description">{description.replace('دروس', 'اختبارات')}</p> 
+                    <p className="card-description">{description.replace('دروس', 'اختبارات')}</p>
                 </div>
             </div>
-            
+
             {/* تراكب رسالة التعطيل */}
             {isCardDisabled && (
                 <div className="disabled-overlay">

@@ -16,6 +16,9 @@ import Subscriptions from "./pages/subscriptions.jsx"; // Import the new modal c
 import Serie from "./pages/serie.jsx"; // Import the new modal component
 import Examen_test from "./pages/examen_test.jsx"; // Import the new modal component
 import Home_admin from "./pages/admin/home_admin.jsx"; // Import the new modal component
+import Admin2 from "./pages/admin/Admin2.jsx"; // Import the Admin2 component
+import AdminPanel from "./pages/admin/AdminPanel.jsx"; // Import the AdminPanel component
+import GlobalBackButton from "./comp/GlobalBackButton"; // ⭐️ New Component
 
 const MODAL_CLOSED_KEY = "welcomeModalClosed";
 
@@ -50,6 +53,7 @@ const App = () => {
 
       {/* Your main routing structure */}
       <BrowserRouter>
+        <GlobalBackButton /> {/* ⭐️ Persistent Global Back Button */}
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
@@ -67,6 +71,8 @@ const App = () => {
           <Route path="/serie" element={<Serie />} />
           <Route path="/Examen" element={<Examen_test />} />
           <Route path="/admin" element={<Home_admin />} />
+          <Route path="/admin2" element={<Admin2 />} />
+          <Route path="/admin-panel" element={<AdminPanel />} />
 
           {/* Catch-all route for any other path */}
           <Route path="/*" element={<Home />} />

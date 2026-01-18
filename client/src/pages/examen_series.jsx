@@ -51,7 +51,7 @@ export default function ExamenSeries() {
 
             try {
                 // استدعاء الـ API الجديد لجلب السلاسل
-                const response = await axios.get('http://localhost:3000/api/quiz/series', {
+                const response = await axios.get('https://code-route-rho.vercel.app/api/quiz/series', {
                     params: { category1, category2 }
                 });
 
@@ -73,8 +73,8 @@ export default function ExamenSeries() {
             <Navbar />
 
             <div className="subscriptions-container" /* Using existing container class for consistent spacing */>
-                <header className="payment-header">
-                    <h1>سلاسل الاختبار: {category2}</h1>
+                <header className="quiz-header">
+                    <h2>سلاسل الاختبار: {category2}</h2>
                     <p style={{ marginTop: '10px' }}>{category1}</p>
                 </header>
 
@@ -136,7 +136,7 @@ export default function ExamenSeries() {
                                         {isLocked ? (
                                             <span style={{ fontSize: '1.5em' }}>🔒</span>
                                         ) : (
-                                            <span style={{ color: 'var(--success-color)', fontWeight: 'bold' }}>مفتوح ✅</span>
+                                            <span style={{ color: 'var(--success-color)', fontWeight: 'bold' }}></span>
                                         )}
                                     </div>
                                 </div>

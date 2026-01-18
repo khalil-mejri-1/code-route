@@ -1,13 +1,13 @@
 // src/pages/Examen_test.js (النسخة النهائية والمعدلة)
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Navbar from '../comp/navbar';
-import { FaChevronRight, FaChevronLeft, FaTimesCircle, FaCheckCircle } from 'react-icons/fa';
-import { useLocation } from 'react-router-dom';
+import { FaChevronRight, FaChevronLeft, FaTimesCircle, FaCheckCircle, FaArrowRight } from 'react-icons/fa';
+import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 // import '../styles/ExamenTest.css'; // تأكد من استيراد الأنماط
 
-const API_URL = 'http://localhost:3000/api/quiz/questions';
+const API_URL = 'https://code-route-rho.vercel.app/api/quiz/questions';
 const FREE_TRIAL_LIMIT = 3; // ⭐️ تحديد الحد المجاني للاختبار (يمكنك تعديله)
 
 // ⭐️ دالة مساعدة لتجزئة الباراميتر المدمج
@@ -34,6 +34,8 @@ const parseCategoryParam = (param) => {
 
 export default function Examen_test() {
     const location = useLocation();
+    const navigate = useNavigate();
+    const scrollRef = useRef(null);
 
     // ⭐️ حالات إدارة البيانات والتحميل
     const [quizData, setQuizData] = useState([]);
@@ -46,6 +48,16 @@ export default function Examen_test() {
     const [showAnswer, setShowAnswer] = useState(false);
     // History: true (صحيح), false (خاطئ), null (لم تتم الإجابة/الكشف بعد)
     const [userAnswersHistory, setUserAnswersHistory] = useState([]);
+
+    // Scroll active question into view
+    useEffect(() => {
+        if (scrollRef.current) {
+            const activeBtn = scrollRef.current.querySelector('.active-lesson');
+            if (activeBtn) {
+                activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            }
+        }
+    }, [currentQuestionIndex]);
 
     // ⭐️ حالة الاشتراك
     const isSubscribed = localStorage.getItem('subscriptions') === 'true';
@@ -221,6 +233,7 @@ export default function Examen_test() {
     if (error || totalQuestions === 0) {
         return <><Navbar /><div style={{ textAlign: 'center', padding: '100px', color: 'red' }}><h2>{error || 'لا توجد أسئلة متاحة حاليًا لهذا الاختبار.'} ⚠️</h2></div></>;
     }
+
     // -----------------------------
 
     return (
@@ -229,8 +242,10 @@ export default function Examen_test() {
             <div className="quiz-container">
                 <div className="quiz-header">
                     <h2>اختبار رخصة القيادة: {mainCategory} - {currentTopic}</h2>
-                    {/* نعرض العدد الكلي للأسئلة */}
-                    <p>السؤال {currentQuestionIndex + 1} من {totalQuestions}</p>
+
+                    <h3>Serie {(new URLSearchParams(location.search).get('nb_serie') || '1')}</h3>
+
+                    {/* <p>السؤال {currentQuestionIndex + 1} من {totalQuestions}</p> */}
                 </div>
 
                 <div className="quiz-content-wrapper">
@@ -239,7 +254,7 @@ export default function Examen_test() {
                     <div className="answer-sheet">
                         <div className="lesson-numbers-list">
                             <h4>أرقام الأسئلة</h4>
-                            <div className="lesson-buttons-grid">
+                            <div className="lesson-buttons-grid" ref={scrollRef}>
                                 {/* ⭐️ التكرار على جميع الأسئلة لجعل جميع الأزرار مرئية */}
                                 {quizData.map((_, index) => {
                                     const isLocked = !isSubscribed && index >= FREE_TRIAL_LIMIT;
@@ -319,25 +334,26 @@ export default function Examen_test() {
                             </span>
                         </div>
 
-                        <div className="question-info">
+                        {/* <div className="question-info">
                             <p>{mainCategory} و {currentTopic}</p>
-                            <p>Serie {(new URLSearchParams(location.search).get('nb_serie') || '1')}</p>
-                        </div>
 
-                        <button
-                            className="reveal-button"
-                            onClick={handleRevealAnswer}
-                            // ⭐️ تعطيل الزر إذا كان محجوباً أو لم يتم اختيار إجابة
-                            disabled={selectedAnswer === null || showAnswer || isCurrentQuestionLocked}
-                        >
-                            تأكيد الإجابة
-                        </button>
+                        </div> */}
 
+                        {/* الزر الخاص بالهاتف (يعرض فقط في وضع الموبايل عبر CSS) */}
                         {showAnswer && !isCurrentQuestionLocked && (
                             <div className={`answer-status ${userAnswersHistory[currentQuestionIndex] ? 'status-correct' : 'status-incorrect'}`}>
                                 {userAnswersHistory[currentQuestionIndex] ? 'إجابة صحيحة!' : 'إجابة خاطئة!'}
                             </div>
                         )}
+                        <button
+                            className="reveal-button mobile-only-reveal"
+                            onClick={handleRevealAnswer}
+                            disabled={selectedAnswer === null || showAnswer || isCurrentQuestionLocked}
+                        >
+                            تأكيد الإجابة
+                        </button>
+
+
                     </div>
 
                 </div>
@@ -347,6 +363,17 @@ export default function Examen_test() {
                     <button onClick={handlePrev} disabled={currentQuestionIndex === 0} className="nav-button">
                         <FaChevronRight /> السابق
                     </button>
+
+                    <button
+                        className="reveal-button mobile-only"
+                        onClick={handleRevealAnswer}
+                        // ⭐️ تعطيل الزر إذا كان محجوباً أو لم يتم اختيار إجابة
+                        disabled={selectedAnswer === null || showAnswer || isCurrentQuestionLocked}
+                        style={{ width: 'auto', minWidth: '200px' }} // Inline override for nav context
+                    >
+                        تأكيد الإجابة
+                    </button>
+
                     <button
                         onClick={handleNext}
                         // ⭐️ تعطيل زر التالي عند الوصول لآخر سؤال مسموح به

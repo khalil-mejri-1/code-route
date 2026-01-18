@@ -48,7 +48,7 @@ export default function CoursSeries() {
 
             try {
                 // استدعاء الـ API لجلب السلاسل (نفس API الامتحانات)
-                const response = await axios.get('http://localhost:3000/api/quiz/series', {
+                const response = await axios.get('https://code-route-rho.vercel.app/api/quiz/series', {
                     params: { category1, category2 }
                 });
                 setSeries(response.data);
@@ -70,7 +70,7 @@ export default function CoursSeries() {
             <div className="subscriptions-container">
                 <header className="payment-header">
                     <h1>سلاسل الدروس: {category2}</h1>
-                    <p style={{ marginTop: '10px' }}>{category1}</p>
+                    <p style={{ marginTop: '10px' }}> الفئة : ( {category1} )</p>
                 </header>
 
                 {loading && (
@@ -120,7 +120,7 @@ export default function CoursSeries() {
                                         {isLocked ? (
                                             <span style={{ fontSize: '1.5em' }}>🔒</span>
                                         ) : (
-                                            <span style={{ color: 'var(--success-color)', fontWeight: 'bold' }}>مفتوح ✅</span>
+                                            <span style={{ color: 'var(--success-color)', fontWeight: 'bold' }}></span>
                                         )}
                                     </div>
                                 </div>

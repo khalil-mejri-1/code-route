@@ -41,7 +41,7 @@ const SignUp = ({ onToggleMode }) => {
 
         try {
             // ⭐️ Real Backend Call
-            await axios.post('http://localhost:3000/api/auth/signup', {
+            await axios.post('https://code-route-rho.vercel.app/api/auth/signup', {
                 fullName,
                 email,
                 password

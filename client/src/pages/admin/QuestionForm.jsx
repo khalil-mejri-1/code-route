@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 
 // ⭐️ تغيير API_URL لنقطة نهاية الدفعة (BATCH)
-const API_URL = 'http://localhost:3000/api/quiz/questions/batch'; 
+const API_URL = 'https://code-route-rho.vercel.app/api/quiz/questions/batch'; 
 
 // 🔑 مفتاح API الخاص بك لـ ImgBB
 const IMGBB_API_KEY = 'd9eb76a38b59f5fb253a8be1456c90c0';

@@ -155,59 +155,204 @@ body {
 /* -------------------------------------- */
 /* 4. عناصر التحكم الجانبية (Controls) */
 /* -------------------------------------- */
-.navbar-controls {
+/* -------------------------------------- */
+/* 4. عناصر التحكم (Actions) */
+/* -------------------------------------- */
+.navbar-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
-  /* مسافة بين العناصر */
+  gap: 15px;
 }
 
-/* Butons in Navbar */
-.lang-button,
+.desktop-only {
+  display: block;
+}
+
+/* Account Trigger Button */
+.account-trigger-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: transparent;
+  border: 1px solid var(--primary-light);
+  padding: 8px 16px;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: var(--primary-color);
+  font-weight: 600;
+  font-family: inherit;
+}
+
+.account-trigger-button:hover {
+  background-color: var(--primary-light);
+  box-shadow: var(--shadow-sm);
+  color: var(--primary-hover);
+}
+
+.account-icon {
+  font-size: 1.4rem;
+}
+
+/* Account Dropdown Menu */
+.account-dropdown-container {
+  position: relative;
+  display: inline-block;
+  /* Ensure it wraps the button tightly */
+}
+
+.account-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 14px);
+  /* Explicitly under the button with a gap */
+  right: 0;
+  /* Align right edge with the button's right edge */
+  width: 260px;
+  max-width: 90vw;
+  /* Prevent overflow on very small screens */
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
+  padding: 8px 0;
+  z-index: 1001;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  animation: slideDown 0.2s cubic-bezier(0.165, 0.84, 0.44, 1);
+  transform-origin: top right;
+
+  /* Arabic Direction */
+  direction: rtl;
+  text-align: right;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.dropdown-header {
+  padding: 12px 20px;
+  font-weight: 700;
+  color: var(--secondary-color);
+  text-align: center;
+  background-color: #f8fafc;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background-color: #edf2f7;
+  margin: 4px 0;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  /* Aligns to right in RTL */
+  gap: 12px;
+  padding: 14px 24px;
+  width: 100%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s;
+  font-size: 0.95rem;
+  font-family: inherit;
+  /* Removed row-reverse to fix Icon-Text order in RTL */
+}
+
+/* Explicit RTL support for dropdown */
+.account-dropdown-menu {
+  direction: rtl;
+}
+
+.dropdown-item:hover {
+  background-color: var(--primary-light);
+  color: var(--primary-color);
+  padding-right: 25px;
+  /* Subtle movement effect */
+}
+
+.dropdown-icon {
+  color: var(--accent-color);
+  font-size: 1.1rem;
+}
+
+.logout-item {
+  color: var(--error-color);
+}
+
+.logout-item .dropdown-icon {
+  color: var(--error-color);
+}
+
+.logout-item:hover {
+  background-color: #fff5f5;
+  color: #c53030;
+}
+
+
+/* Existing buttons */
 .signup-button,
 .abonement-button {
-  padding: 10px 20px;
-  /* Larger touch target */
   border: none;
   border-radius: 50px;
-  /* Pill shape */
   font-weight: 700;
   text-decoration: none;
   cursor: pointer;
-  font-size: 1rem;
   transition: all var(--transition-speed);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   box-shadow: var(--shadow-sm);
+  font-family: inherit;
+}
+
+.signup-button {
+  padding: 10px 24px;
+
+  font-size: 0.95rem;
+
 }
 
 .abonement-button {
   background-color: var(--accent-color);
   color: var(--text-light);
+  padding: 10px 24px;
+  font-size: 0.95rem;
+
+
 }
 
 .abonement-button:hover {
   background-color: var(--warning-color);
-  /* distinctive hover */
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
 }
 
-.lang-button {
-  background-color: transparent;
-  color: var(--text-main);
-  border: 1px solid var(--primary-light);
-}
-
-.lang-button:hover {
-  background-color: var(--primary-light);
-  color: var(--primary-color);
-}
-
+/* Signup Styles */
 .signup-button {
   background-color: var(--primary-color);
   color: var(--text-light);
+}
+
+@media screen and (max-width:992px) {
+  .signup-button {
+    padding: 9px 15px;
+    font-size: 0.80rem;
+
+  }
+
 }
 
 .signup-button:hover {
@@ -216,25 +361,11 @@ body {
   box-shadow: var(--shadow-md);
 }
 
+/* Login Input (if used) */
 .login-input {
-  padding: 8px 10px;
-  border: 1px solid #495057;
-  border-radius: 20px;
-  background-color: #2c3e50;
-  /* خلفية داكنة خفيفة */
-  color: var(--text-light);
-  width: 120px;
-  transition: border-color var(--transition-speed), box-shadow var(--transition-speed);
-}
-
-.login-input::placeholder {
-  color: #adb5bd;
-}
-
-.login-input:focus {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
-  outline: none;
+  /* ... existing styles ... */
+  display: none;
+  /* remove if not used or keep generic */
 }
 
 /* -------------------------------------- */
@@ -252,7 +383,8 @@ body {
 .line {
   width: 25px;
   height: 3px;
-  background-color: var(--text-light);
+  background-color: #000000;
+  /* Changed to Black as requested */
   margin: 5px;
   transition: all var(--transition-speed) ease;
 }
@@ -281,48 +413,105 @@ body {
     padding: 10px 20px;
   }
 
-  .menu-icon {
-    display: block;
-    /* إظهار أيقونة البرجر */
+  /* Actions Layout on Mobile */
+  /* Actions Layout on Mobile */
+  .navbar-actions {
+    gap: 15px;
+    margin-left: auto;
+    /* Push to right to ensure separation from logo */
+    display: flex;
+    align-items: center;
   }
 
+  .desktop-only {
+    display: none !important;
+  }
+
+  .menu-icon {
+    display: block;
+    margin-right: 15px;
+    /* Space between AuthButton and MenuIcon */
+  }
+
+  /* Account Button Mobile tweaks */
+  .account-trigger-button {
+    padding: 6px;
+    border: none;
+    background: rgba(0, 0, 0, 0.03);
+    /* Subtle bg */
+  }
+
+  .account-text {
+    display: none;
+  }
+
+  .account-icon {
+    font-size: 1.8rem;
+  }
+
+  /* Drawer Styles */
   .nav-links {
-    /* تحويل القائمة إلى عمود واحد */
     flex-direction: column;
     position: absolute;
-    top: 80px;
-    /* Below navbar */
+    top: 70px;
+    /* Adjusted top */
     right: 0;
     width: 100%;
-    background-color: var(--background-card);
-    border-top: 1px solid var(--primary-light);
+    background-color: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(15px);
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
     transform: translateX(100%);
-    transition: transform var(--transition-speed) ease-in;
-    padding: 20px 0;
-    box-shadow: var(--shadow-lg);
+    transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+    padding: 30px 20px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    height: auto;
+    z-index: 999;
   }
 
   .nav-links.active {
     transform: translateX(0);
-    /* إظهار القائمة عند التبديل */
   }
 
   .nav-links a {
     text-align: center;
     width: 100%;
-    margin: 10px 0;
-    padding: 15px 0;
+    margin: 8px 0;
+    padding: 16px 0;
+    border-radius: 12px;
+    font-size: 1.2rem;
   }
 
-  .contact-button {
-    margin-top: 15px;
-    margin-left: 0 !important;
+  .nav-links a:hover {
+    background-color: var(--primary-light);
   }
 
-  /* إخفاء عناصر التحكم الإضافية في وضع الهاتف للحفاظ على البساطة */
-  .navbar-controls {
-    display: none;
+  /* Buttons inside Mobile Menu */
+  .mobile-auth-buttons {
+    display: flex !important;
+    /* Enable flex for mobile buttons wrapper */
+    flex-direction: column;
+    width: 100%;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--primary-light);
   }
+
+  .mobile-auth-buttons .abonnement-link {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+
+  .mobile-auth-buttons .abonement-button {
+    width: 100%;
+    padding: 14px;
+    font-size: 1.1rem;
+  }
+}
+
+/* Default state for mobile auth buttons (hidden on desktop) */
+.mobile-auth-buttons {
+  display: none;
 }
 
 
@@ -486,44 +675,101 @@ body {
 /* --- Responsiveness (Friendly Design) --- */
 
 /* Tablet and smaller screens */
+/* Tablet and smaller screens */
 @media (max-width: 768px) {
-  .hero-container {
-    padding: 60px 15px;
+  .hero_container {
+    /* Fixed typo from hero-container */
+    padding: 120px 20px 40px;
+    /* More top padding to clear navbar */
+    align-items: flex-start;
+    /* Start from top, don't center vertically which pushes title up */
+    height: auto;
+    /* Allow content to dictate height */
+    min-height: 100vh;
+  }
+
+  .hero-content {
+    padding-top: 20px;
   }
 
   .hero-title {
-    font-size: 2.5rem;
-    /* Smaller title */
+    font-size: 2.2rem;
+    line-height: 1.3;
+    margin-bottom: 15px;
   }
 
   .hero-subtitle {
-    font-size: 1.1rem;
+    font-size: 1rem;
+    margin-bottom: 30px;
   }
 
   .hero-stats {
-    /* On smaller screens, stack the stats in a single column */
-    grid-template-columns: 1fr;
-    gap: 15px;
-    max-width: 300px;
-    /* Constrain width on mobile */
+    display: grid;
+    /* 2 columns on mobile instead of 1 to save vertical space */
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    max-width: 100%;
     margin: 0 auto;
+    padding: 10px 0;
+  }
+
+  .stat-card {
+    padding: 15px 5px;
+    /* Compact padding */
+    min-height: auto;
+  }
+
+  .stat-number {
+    font-size: 1.8rem;
+  }
+
+  .stat-label {
+    font-size: 0.9rem;
   }
 
   .hero-buttons {
     flex-direction: column;
-    /* Stack buttons vertically */
-    gap: 10px;
+    gap: 12px;
+    width: 100%;
+    max-width: 300px;
+    margin: 0 auto 30px;
+  }
+
+  .hero-buttons button {
+    width: 100%;
+    padding: 14px;
+    font-size: 1.1rem;
   }
 }
 
 /* Very small screens (mobile) */
 @media (max-width: 480px) {
   .hero-title {
-    font-size: 2rem;
+    font-size: 1.8rem;
+  }
+
+  .hero-stats {
+    /* On very small screens, maybe 1 column or stick to 3 tight ones? Let's try 3 tight ones scrollable or stick to grid */
+    grid-template-columns: repeat(1, 1fr);
+    /* Back to 1 column for <480px if 3 is too tight, or maybe 2? */
+    /* Actually, the user wants it "organized". 3 Stacked is "organized" but tall. 
+         Let's try a row of 3 for data, or 2 top 1 bottom. 
+         Let's stick to 1 column for <480 but compact */
+    gap: 12px;
+  }
+
+  .stat-card {
+    flex-direction: row;
+    /* Horizontal stat card on mobile? */
+    align-items: center;
+    justify-content: space-between;
+    padding: 15px 25px;
+    text-align: left;
   }
 
   .stat-number {
-    font-size: 2rem;
+    font-size: 1.5rem;
+    margin-bottom: 0;
   }
 }
 
@@ -559,10 +805,18 @@ body {
 
 }
 
+/*design CoursesSection*/
+
+.features-section {
+  padding: 80px 24px;
+  background-color: #ffffff00;
+  margin-top: 100px;
+  margin-bottom: 100px;
+}
+
 .section-subtitle {
   text-align: center;
   margin-bottom: 20px;
-
 }
 
 .section-title,
@@ -576,36 +830,61 @@ body {
 
 .features-grid {
   max-width: 1200px;
-
   margin: 0 auto;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 32px;
 }
 
+/* Unified Modern Card Design (Desktop + Mobile) */
 .feature-card {
-  background: var(--background-card);
-  padding: 40px;
-  border-radius: var(--border-radius);
+  position: relative;
+  overflow: hidden;
+  background: #ffffff;
+  padding: 40px 30px;
+  border-radius: 24px;
   text-align: center;
-  transition: all 0.3s ease;
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--primary-light);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  /* Soft premium shadow */
+  border: 1px solid rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Creative Touch: Top Gradient Line */
+.feature-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
 }
 
 .feature-card:hover {
   transform: translateY(-8px);
-  box-shadow: var(--shadow-lg);
-  border-color: var(--accent-color);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1);
 }
 
 .feature-icon {
-
-  margin: 0 auto 20px;
-  border-radius: 16px;
+  margin-bottom: 20px;
+  width: 80px;
+  height: 80px;
+  background: var(--primary-light);
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 2rem;
+  color: var(--primary-color);
+  transition: transform 0.3s ease;
+}
+
+.feature-card:hover .feature-icon {
+  transform: scale(1.1) rotate(5deg);
 }
 
 .feature-title {
@@ -616,10 +895,33 @@ body {
 }
 
 .feature-description {
-  font-size: 15px;
+  font-size: 1rem;
   color: #64748b;
   margin: 0;
   line-height: 1.6;
+}
+
+/* Mobile Adjustments (Layout Only) */
+@media screen and (max-width: 768px) {
+  .features-section {
+    padding: 40px 20px;
+    margin-top: 40px;
+    margin-bottom: 40px;
+  }
+
+  .section-title,
+  .section-title_home {
+    font-size: 1.8rem;
+  }
+
+  .features-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .feature-card {
+    padding: 30px 20px;
+  }
 }
 
 /*fin design CoursesSection*/
@@ -648,285 +950,360 @@ body {
 /*design pricingPlans*/
 
 /* --- General Container and Header --- */
+/*design pricingPlans*/
+
+/* --- General Container and Header --- */
 .pricing-container {
   background-color: var(--background-main);
   padding: 80px 5%;
   font-family: var(--font-family);
-  padding-top: 100px;
-  padding-bottom: 150px;
   text-align: center;
+  position: relative;
+  overflow: hidden;
+  /* Ensure animations don't scroll page */
 }
 
 .pricing-title {
-  font-size: 2.5rem;
+  font-size: 2.8rem;
   font-weight: 800;
   color: var(--secondary-color);
-  margin-bottom: 10px;
+  margin-bottom: 15px;
+  position: relative;
+  display: inline-block;
 }
 
 .pricing-subtitle {
   font-size: 1.25rem;
   color: var(--text-secondary);
-  margin-bottom: 50px;
+  margin-bottom: 60px;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 /* --- Pricing Grid Layout --- */
 .pricing-grid {
-  display: grid;
-
-  /* 3 أعمدة متساوية على الشاشات الكبيرة */
-  grid-template-columns: repeat(1, 1fr);
-  gap: 25px;
-  max-width: 400px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 30px;
+  max-width: 1200px;
   margin: 0 auto;
+  align-items: stretch;
+  /* Make cards same height */
 }
 
 /* --- Individual Pricing Card --- */
 .pricing-card {
   background-color: var(--background-card);
-  padding: 35px;
-  border-radius: var(--border-radius);
-  box-shadow: var(--shadow-md);
-  transition: all 0.3s ease;
+  padding: 40px 30px;
+  border-radius: 24px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  /* Soft, modern shadow */
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  /* Bouncy hover */
   text-align: right;
+  /* RTL alignment */
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--primary-light);
+  position: relative;
+  border: 1px solid rgba(0, 0, 0, 0.03);
+  flex: 1;
+  min-width: 300px;
+  max-width: 380px;
+  color: var(--text-main);
 }
 
 .pricing-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  transform: translateY(-10px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
 }
 
-.pricing-card.highlighted {
-  /* الخصائص الأصلية للتوسيع والظل */
-  transform: scale(1.05);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-  transition: transform 0.4s ease, box-shadow 0.4s ease;
-  z-index: 10;
-
-  /* 1. إزالة خاصية border الأصلية */
-  border: none;
-  /* أو border: 3px solid transparent; */
-
-  /* 2. تفعيل الموضع النسبي للعنصر الحقيقي */
-  position: relative;
-
-  /* 3. التأكد من أن الزوايا مدورة إذا كانت البطاقة مدورة */
-  border-radius: 12px;
-  /* افترضنا زوايا مدورة، عدلها حسب تصميمك */
-  overflow: hidden;
-  /* هام لضمان عدم خروج الإطار الزائف عن الزوايا */
-}
-
-/* 4. تصميم الإطار المتدرج الدوار */
-.pricing-card.highlighted::before {
-  content: '';
-  /* 5. جعل العنصر الزائف يغطي كامل البطاقة */
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  right: -50%;
-  bottom: -50%;
-  z-index: -1;
-  /* وضعه خلف المحتوى */
-
-  /* 6. تحديد التدرج اللوني (RGB Gradient) */
-  background: conic-gradient(from 0deg,
-      rgb(255, 0, 0),
-      /* أحمر */
-      rgb(255, 255, 0),
-      /* أصفر */
-      rgb(0, 255, 0),
-      /* أخضر */
-      rgb(0, 255, 255),
-      /* سماوي */
-      rgb(0, 0, 255),
-      /* أزرق */
-      rgb(255, 0, 255),
-      /* بنفسجي */
-      rgb(255, 0, 0)
-      /* العودة للأحمر لإغلاق الدائرة */
-    );
-
-  /* 7. تطبيق حركة الدوران */
-  animation: rotateBorder 4s linear infinite;
-}
-
-/* 8. إنشاء الثقب في المنتصف لجعلها تبدو كإطار */
-.pricing-card.highlighted::after {
-  content: '';
-  position: absolute;
-  top: 3px;
-  /* يجب أن تكون بنفس عرض الإطار الذي تريده */
-  left: 3px;
-  right: 3px;
-  bottom: 3px;
-  background: var(--card-background, white);
-  /* استخدم لون خلفية البطاقة هنا */
-  z-index: 0;
-  /* وضعه فوق الإطار الدوار وخلف المحتوى */
-  border-radius: 10px;
-  /* أصغر بـ 2px من البطاقة الأصلية لتتناسب مع الإطار */
-}
-
-/* 9. التأكد من أن محتوى البطاقة يظهر فوق كل شيء */
-.pricing-card.highlighted * {
-  z-index: 1;
-  position: relative;
-}
-
-@keyframes rotateBorder {
-  to {
-    transform: rotate(360deg);
-    /* تدوير العنصر الزائف دورة كاملة */
-  }
-}
-
-/* تعديل خاصية التحويل عند المرور بالفأرة (hover) لتجنب التداخل أو التغيير المفاجئ */
-.pricing-card.highlighted:hover {
-  /* يمكن زيادتها قليلاً عند المرور أو إبقائها ثابتة */
-  transform: scale(1.08);
-  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.25);
-}
-
-/* هام: يجب التأكد من أن البطاقات العادية لا تتأثر عند المرور بها */
-.pricing-card:hover {
-  /* يجب أن تكون أقل توسيعًا من البطاقة المميزة */
-  transform: translateY(-3px) scale(1.01);
-  /* توسيع بسيط عند المرور */
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-}
-
+/* Plan Content Styles */
 .plan-name {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #34495e;
-  margin-bottom: 5px;
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--primary-color);
+  margin-bottom: 10px;
 }
 
 .plan-tagline {
   font-size: 0.95rem;
-  color: #7f8c8d;
-  min-height: 20px;
-  /* لتفادي اختلاف الارتفاعات */
-  margin-bottom: 20px;
+  color: var(--text-secondary);
+  margin-bottom: 25px;
+  min-height: 40px;
+  /* Helper to align prices */
 }
 
-/* --- Price Display --- */
 .plan-price {
   display: flex;
-  align-items: flex-end;
-  margin-bottom: 25px;
-  direction: ltr;
-  /* عكس اتجاه عرض السعر والعملة */
+  align-items: baseline;
+  justify-content: flex-start;
+  /* Right aligned in RTL */
+  margin-bottom: 30px;
+  direction: rtl;
+  /* Ensure numbers display correctly if mixed */
+  flex-direction: row-reverse;
+  /* Put Currency Right, Number Left for Arabic style */
+  gap: 5px;
   justify-content: flex-end;
-  /* لجعله يبدأ من اليمين في RTL */
-  padding-bottom: 15px;
-  border-bottom: 1px solid #eee;
+  /* Align right */
 }
 
 .price-number {
-  font-size: 3.5rem;
+  font-size: 3rem;
   font-weight: 800;
-  color: var(--primary-color);
+  color: var(--secondary-color);
   line-height: 1;
 }
 
 .price-currency {
-  font-size: 1rem;
-  color: #7f8c8d;
-  margin-right: 5px;
-  margin-bottom: 5px;
-}
-
-/* --- Buttons --- */
-.pricing-card button {
-  padding: 12px 20px;
-  border-radius: 6px;
   font-size: 1.1rem;
   font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.3s, transform 0.2s;
-  width: 100%;
-  margin-bottom: 25px;
+  color: var(--text-secondary);
 }
 
-.btn-primary {
-  background-color: var(--primary-color);
-  color: var(--text-light);
-  border: none;
-}
-
-.btn-primary:hover {
-  background-color: #2980b9;
-}
-
-.btn-outline {
-  background-color: transparent;
-  color: var(--primary-color);
-  border: 2px solid var(--primary-color);
-}
-
-.btn-outline:hover {
-  background-color: #f7f7f7;
-}
-
-/* --- Features List --- */
+/* Features List */
 .plan-features {
   list-style: none;
+  margin-top: auto;
+  direction: ltr;
+
+  /* Push keys to bottom if needed or just space */
+  margin-bottom: 30px;
+  margin-top: 50px;
   padding: 0;
-  margin: 0;
-  flex-grow: 1;
-  /* لتمديد القائمة وملء المساحة المتاحة عمودياً */
 }
 
 .plan-features li {
   display: flex;
   align-items: center;
-  font-size: 1rem;
-  padding: 10px 0;
-  border-bottom: 1px dashed #f0f0f0;
-  color: #34495e;
-}
+  margin-bottom: 15px;
+  direction: rtl;
 
-.plan-features li:last-child {
-  border-bottom: none;
+  font-size: 1rem;
+  color: var(--text-secondary);
 }
 
 .feature-icon {
-  margin-left: 10px;
-  /* مسافة بين الأيقونة والنص في RTL */
-  font-size: 1.1rem;
+  margin-left: 12px;
+  font-size: 1.2rem;
 }
 
 .feature-icon.check {
-  color: #27ae60;
-  /* أخضر للصح */
+  color: var(--success-color);
+  background: #c6f6d5;
+  padding: 4px;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .feature-icon.times {
-  color: #e74c3c;
-  /* أحمر للخطأ */
+  color: var(--text-secondary);
+  opacity: 0.5;
 }
 
-.plan-features li.excluded {
-  color: #95a5a6;
-  /* لون باهت للميزات غير المدرجة */
+/* Button */
+.pricing-card button {
+  width: 100%;
+  padding: 16px;
+  border-radius: 50px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+  margin-top: 20px;
+  background: #edf2f7;
+  color: var(--secondary-color);
 }
 
-/* --- Responsiveness --- */
+.pricing-card button:hover {
+  background: #e2e8f0;
+}
 
 
-@media (max-width: 600px) {
+/* --- Highlighted Card (Special Effects) --- */
+.pricing-card.highlighted {
+  transform: scale(1.05);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+  z-index: 2;
+  border: none;
+  /* Handled by pseudo */
+}
+
+.pricing-card.highlighted button {
+  background: var(--primary-color);
+  color: white;
+  box-shadow: 0 4px 15px rgba(44, 82, 130, 0.3);
+}
+
+.pricing-card.highlighted button:hover {
+  background: var(--primary-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(44, 82, 130, 0.4);
+}
+
+
+/*design pricingPlans*/
+
+/* --- Enhanced Pricing Container --- */
+.pricing-container {
+  background-color: var(--background-main);
+  padding: 100px 5%;
+  font-family: var(--font-family);
+  text-align: center;
+  position: relative;
+}
+
+.pricing-title {
+  font-size: 3rem;
+  font-weight: 900;
+  color: var(--secondary-color);
+  margin-bottom: 20px;
+  position: relative;
+  display: inline-block;
+}
+
+.pricing-subtitle {
+  font-size: 1.2rem;
+  color: var(--text-secondary);
+  margin-bottom: 70px;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+  opacity: 0.8;
+}
+
+/* --- Grid Layout --- */
+.pricing-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 25px;
+  max-width: 1100px;
+  margin: 0 auto;
+  align-items: center;
+  /* Vertical center alignment */
+}
+
+/* --- Card Base Styles --- */
+.pricing-card {
+  background: #ffffff;
+  padding: 40px 30px;
+  border-radius: 30px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
+  text-align: right;
+  direction: rtl;
+  /* RTL Layout */
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  border: 1px solid rgba(0, 0, 0, 0.03);
+  flex: 1;
+  min-width: 300px;
+  max-width: 360px;
+  color: var(--text-main);
+  z-index: 1;
+}
+
+.pricing-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.08);
+}
+
+/* --- Highlighted (Pro) Card --- */
+/* --- Highlighted (Pro) Card --- */
+.pricing-card.highlighted {
+  background: white;
+  border: 2px solid var(--primary-color);
+  transform: scale(1.05);
+  box-shadow: 0 15px 45px rgba(0, 0, 0, 0.1);
+  z-index: 2;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle Gradient overlay for premium feel */
+.pricing-card.highlighted::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+}
+
+.pricing-card.highlighted:hover {
+  transform: scale(1.08) translateY(-5px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+}
+
+/* Force Default Text Colors in Highlighted (Removed White Override) */
+.pricing-card.highlighted * {
+  color: inherit !important;
+  border-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Specific Overrides for Highlighted */
+.pricing-card.highlighted .plan-name {
+  color: var(--primary-color) !important;
+}
+
+.pricing-card.highlighted .price-number {
+  color: var(--primary-color) !important;
+}
+
+.pricing-card.highlighted .plan-price {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.pricing-card.highlighted .feature-icon.check {
+  color: var(--success-color) !important;
+  /* Standard Green Check */
+  background: transparent;
+  width: auto;
+  height: auto;
+  padding: 0;
+}
+
+/* Primary Button for Highlighted */
+.pricing-card.highlighted button {
+  background: var(--primary-color) !important;
+  color: white !important;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.pricing-card.highlighted button:hover {
+  background: var(--primary-hover) !important;
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+}
+
+/* --- Mobile Responsiveness --- */
+@media (max-width: 992px) {
   .pricing-grid {
-    /* عمود واحد على شاشات الجوال */
-    grid-template-columns: 1fr;
+    flex-direction: column;
+    gap: 40px;
+    padding: 0 10px;
+  }
+
+  .pricing-card {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .pricing-card.highlighted {
+    transform: scale(1.02);
+    margin: 10px 0;
   }
 }
-
-/* fin design pricingPlans*/
 
 
 
@@ -1520,19 +1897,29 @@ body {
 }
 
 /* Ajustement pour les petits écrans (si le dropdown est actif en mode mobile) */
-@media (max-width: 768px) {
+@media (max-width: 992px) {
 
   /* Le menu déroulant du compte peut être affiché en pleine largeur sous le bouton */
   .account-dropdown-menu {
-    position: relative;
+    position: absolute;
     /* Devient partie du flux normal */
     left: auto;
-    top: auto;
+    top: 40px;
     min-width: 100%;
     margin-top: 5px;
-    border: none;
-    box-shadow: none;
+    border-radius: 5px;
+    border: 1px solid rgba(0, 0, 0, 0.233);
+    animation: slideDown 0.2s cubic-bezier(0.165, 0.84, 0.44, 1);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.404);
+    z-index: 1001;
+    transform-origin: top right;
+
+    /* Arabic Direction */
+    direction: rtl;
+    text-align: right;
   }
+
+
 
   .account-dropdown-container {
     width: 100%;
@@ -1540,6 +1927,17 @@ body {
   }
 }
 
+@media (max-width: 425px) {
+
+  /* Le menu déroulant du compte peut être affiché en pleine largeur sous le bouton */
+  .account-dropdown-menu {
+
+    width: 190px;
+    right: -80px;
+
+
+  }
+}
 
 /* fin design login  reguster*/
 
@@ -1558,12 +1956,16 @@ body {
 /* نمط العنوان الرئيسي */
 .main-title {
   text-align: center;
-  color: var(--secondary-color);
   margin-top: 150px;
   padding: 20px 0;
-  font-size: 2.2em;
+  color: var(--primary-color);
+  font-size: 2rem;
   font-weight: 700;
+
 }
+
+
+
 
 /* حاوية الشبكة للبطاقات (Grid Container) */
 .cards-grid-container {
@@ -2230,7 +2632,7 @@ body {
 
 .subscriptions-container {
   max-width: 1200px;
-  margin: 140px auto 60px;
+  margin: 0px auto 60px;
   padding: 20px;
   direction: rtl;
   /* Support Right-to-Left */
@@ -2564,7 +2966,7 @@ body {
 /* --- Quiz / Exam Interface --- */
 .quiz-container {
   max-width: 1200px;
-  margin: 150px auto;
+  margin: 80px auto;
   padding: 20px;
   font-family: var(--font-family);
   color: var(--text-main);
@@ -2574,7 +2976,7 @@ body {
 
 .quiz-header {
   text-align: center;
-  margin-bottom: 30px;
+  margin-bottom: 0px;
 }
 
 .quiz-header h2 {
@@ -2804,6 +3206,30 @@ body {
   box-shadow: var(--shadow-md);
 }
 
+@media screen and (max-width: 992px) {
+
+  .your-response-box,
+  .question-info {
+    display: none;
+  }
+
+  /* --- Quiz / Exam Interface --- */
+  .quiz-container {
+    max-width: 1200px;
+    margin: 80px auto;
+
+    /* Arabic support */
+  }
+
+}
+
+@media screen and (max-width: 425px) {
+
+  .quiz-header h2 {
+    font-size: 1.2rem;
+  }
+}
+
 .your-response-box p {
   font-size: 1.1rem;
   opacity: 0.9;
@@ -2821,6 +3247,10 @@ body {
   height: 60px;
   margin: 15px auto 0;
   border-radius: 10px;
+}
+
+.mobile-only-reveal {
+  display: none;
 }
 
 .reveal-button {
@@ -2876,7 +3306,42 @@ body {
 .quiz-navigation {
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  /* Align buttons vertically */
   margin-top: 40px;
+  gap: 20px;
+  /* Safe gap */
+}
+
+/* Mobile Nav: Stack buttons */
+@media (max-width: 768px) {
+  .quiz-navigation {
+    flex-direction: column-reverse;
+    /* Prev/Next at Bottom, Confirm Top? Or Column? */
+    /* Let's Try Column with custom order */
+    flex-direction: column;
+  }
+
+  .quiz-navigation .reveal-button {
+    width: 100% !important;
+    /* Override inline style */
+    order: -1;
+    /* Confirm First on Mobile */
+    margin-bottom: 15px;
+  }
+
+  .nav-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .mobile-only-reveal {
+    display: block;
+  }
+
+  .mobile-only {
+    display: none;
+  }
 }
 
 .nav-button {
@@ -2912,19 +3377,377 @@ body {
   transform: none;
 }
 
-/* Responsive */
+/* --- Mobile Optimization for Quiz/Series Page --- */
 @media (max-width: 992px) {
+
+  /* Unstack the grid columns */
   .quiz-content-wrapper {
-    grid-template-columns: 1fr;
-    /* Stack vertically */
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
   }
 
-  .answer-sheet,
-  .control-panel {
-    order: 2;
+  /* 1. Question Numbers Strip (Answer Sheet) */
+  .answer-sheet {
+    order: -1;
+    /* Move to Top */
+    width: 100%;
+    padding: 10px 0;
+    /* Reduce padding */
+    border: none;
+    box-shadow: none;
+    background: transparent;
+    overflow: hidden;
+    /* Prevent container scroll */
   }
 
+  /* Hide the "Lesson Numbers" Header on mobile */
+  .lesson-numbers-list h4 {
+    display: none;
+  }
+
+  /* Horizontal Scrollable Strip for Buttons */
+  .lesson-buttons-grid {
+    display: flex;
+    /* Flex row */
+    grid-template-columns: none;
+    /* Reset grid */
+    flex-wrap: nowrap;
+    /* No wrapping */
+    gap: 10px;
+    padding: 5px 15px;
+    /* Add some internal padding */
+    overflow-x: auto;
+    /* Enable horizontal scroll */
+    justify-content: flex-start;
+
+    /* Hide scrollbar for cleaner UI */
+    scrollbar-width: none;
+    /* Firefox */
+    -ms-overflow-style: none;
+    /* IE */
+  }
+
+  .lesson-buttons-grid::-webkit-scrollbar {
+    display: none;
+    /* Chrome/Safari */
+  }
+
+  .lesson-buttons-grid button {
+    flex-shrink: 0;
+    /* Prevent buttons from shrinking */
+    width: 45px;
+    height: 45px;
+    font-size: 1.1rem;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  }
+
+  /* 2. Main content (Image & Question) */
   .question-main {
+    order: 0;
+    padding: 15px;
+    width: 100%;
+  }
+
+  .question-title {
+    font-size: 1.3em;
+  }
+
+  /* 3. Control Panel (Bottom) */
+  .control-panel {
     order: 1;
+    width: 100%;
+  }
+}
+
+/* Back Button Styled */
+.back-btn-styled {
+  transition: transform 0.2s ease, background-color 0.2s ease;
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+
+.back-btn-styled:hover {
+  transform: translateX(-5px);
+  background-color: rgba(43, 108, 176, 0.1);
+  /* Light primary bg */
+}
+
+/* Global Back Button (Navbar) */
+.global-back-btn {
+  background: white;
+  border: 1px solid var(--primary-light);
+  color: var(--primary-color);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-left: 15px;
+  /* Spacing from Logo */
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.global-back-btn:hover {
+  background: var(--primary-color);
+  color: white;
+  transform: translateX(-3px);
+  box-shadow: var(--shadow-md);
+}
+
+@media (max-width: 992px) {
+  .global-back-btn {
+    width: 35px;
+    height: 35px;
+    font-size: 0.9em;
+    margin-left: 10px;
+  }
+}
+
+/* -------------------------------------- */
+/* 4. Consistent Page Titles (Responsive) */
+/* -------------------------------------- */
+
+/* Unified Title Styles */
+.main-title,
+.quiz-header h2,
+.payment-header h1,
+.payment-header h2 {
+  text-align: center;
+  color: var(--primary-color);
+  font-weight: 800;
+  line-height: 1.3;
+  margin-top: 100px;
+  /* Base clearance for fixed Navbar */
+  margin-bottom: 20px;
+  font-size: 2.2rem;
+  /* Desktop size */
+  padding: 0 15px;
+}
+
+/* Reset if inside a container that handles spacing */
+.quiz-container .quiz-header h2 {
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+/* Tablet (max 992px) */
+@media (max-width: 992px) {
+
+  .main-title,
+  .quiz-header h2,
+  .payment-header h1,
+  .payment-header h2 {
+    font-size: 1.8rem;
+    margin-top: 90px;
+  }
+}
+
+/* Mobile (max 768px) */
+@media (max-width: 768px) {
+
+  .main-title,
+  .quiz-header h2,
+  .payment-header h1,
+  .payment-header h2 {
+    font-size: 1.6rem;
+    margin-top: 85px;
+    margin-bottom: 15px;
+  }
+
+  /* Ensure container pushes down enough on mobile */
+  .quiz-container {
+    margin-top: 90px;
+  }
+}
+
+/* Small Mobile (max 480px) */
+@media (max-width: 480px) {
+
+  .main-title,
+  .quiz-header h2,
+  .payment-header h1,
+  .payment-header h2 {
+    font-size: 1.4rem;
+    margin-top: 80px;
+  }
+}
+
+/* -------------------------------------- */
+/* 5. Global Floating Back Button */
+/* -------------------------------------- */
+.global-back-floating {
+  position: fixed;
+  top: 90px;
+  /* Below Navbar (which is ~70-80px) */
+  right: 20px;
+  /* Right side for RTL flow or easy access */
+  z-index: 999;
+
+  background-color: white;
+  color: var(--primary-color);
+  border: 1px solid var(--primary-light);
+  padding: 8px 15px;
+  border-radius: 20px;
+
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  font-family: var(--font-family);
+  font-weight: bold;
+  font-size: 0.9rem;
+
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+  transition: all 0.3s ease;
+}
+
+.global-back-floating:hover {
+  background-color: var(--primary-color);
+  color: white;
+  transform: scale(1.05);
+}
+
+@media (max-width: 768px) {
+  .global-back-floating {
+    top: 80px;
+    right: 10px;
+    padding: 6px 12px;
+    font-size: 0.85rem;
+  }
+}
+
+/* -------------------------------------- */
+/* 6. Modern Answer Selection Modal */
+/* -------------------------------------- */
+.modern-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.85);
+  /* Deep slate with transparency */
+  backdrop-filter: blur(12px);
+  /* Glassmorphism effect */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  animation: fadeIn 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+.modern-modal-content {
+  background: white;
+  padding: 40px;
+  border-radius: 24px;
+  width: 90%;
+  max-width: 450px;
+  text-align: center;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  animation: scaleUp 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+.modern-modal-content h3 {
+  margin-bottom: 30px;
+  font-size: 1.5rem;
+  color: var(--secondary-color);
+  font-weight: 800;
+}
+
+.answer-selection-grid {
+  display: flex;
+  justify-content: center;
+  gap: 25px;
+  margin-bottom: 35px;
+}
+
+.selection-circle {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  border: 3px solid #e2e8f0;
+  background: #f8fafc;
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.selection-circle:hover {
+  transform: translateY(-5px) scale(1.1);
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.selection-circle.current-active {
+  background: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 20px rgba(44, 82, 130, 0.4);
+}
+
+.close-modal-btn {
+  padding: 12px 30px;
+  background: #f1f5f9;
+  color: #64748b;
+  border: none;
+  border-radius: 50px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.close-modal-btn:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleUp {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@media (max-width: 480px) {
+  .modern-modal-content {
+    padding: 30px 20px;
+  }
+
+  .selection-circle {
+    width: 60px;
+    height: 60px;
+    font-size: 1.4rem;
+  }
+
+  .answer-selection-grid {
+    gap: 15px;
   }
 }
