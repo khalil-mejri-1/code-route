@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Navbar from '../../comp/navbar';
 import './AdminPanel.css'; // We'll create this for styling
+import { API_BASE_URL, IMGBB_API_KEY, IMGBB_UPLOAD_URL } from '../../config';
 
 const AdminPanel = () => {
     const [activeTab, setActiveTab] = useState('categories');
@@ -15,6 +16,42 @@ const AdminPanel = () => {
 
     // Edit states
     const [editingItem, setEditingItem] = useState(null); // { type: 'category'|'topic', data: {} }
+    const [uploading, setUploading] = useState(false);
+
+    const uploadToImgBB = async (file) => {
+        setUploading(true);
+        try {
+            const base64 = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = (error) => reject(error);
+                reader.readAsDataURL(file);
+            });
+
+            const params = new URLSearchParams();
+            params.append('image', base64);
+
+            const response = await fetch(`${IMGBB_UPLOAD_URL}?key=${IMGBB_API_KEY}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: params.toString()
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                return result.data.url;
+            } else {
+                throw new Error(result.error?.message || 'فشل الرفع');
+            }
+        } catch (error) {
+            alert('حدث خطأ أثناء رفع الصورة: ' + error.message);
+            return null;
+        } finally {
+            setUploading(false);
+        }
+    };
 
     useEffect(() => {
         fetchCategories();
@@ -31,7 +68,7 @@ const AdminPanel = () => {
 
     const fetchCategories = async () => {
         try {
-            const res = await axios.get('https://code-route-rho.vercel.app//api/categories');
+            const res = await axios.get(`${API_BASE_URL}/categories`);
             setCategories(res.data);
         } catch (err) {
             console.error(err);
@@ -40,7 +77,7 @@ const AdminPanel = () => {
 
     const fetchTopics = async () => {
         try {
-            const res = await axios.get('https://code-route-rho.vercel.app//api/topics');
+            const res = await axios.get(`${API_BASE_URL}/topics`);
             setTopics(res.data);
         } catch (err) {
             console.error(err);
@@ -49,7 +86,7 @@ const AdminPanel = () => {
 
     const fetchUsers = async () => {
         try {
-            const res = await axios.get('https://code-route-rho.vercel.app//api/users');
+            const res = await axios.get(`${API_BASE_URL}/users`);
             setUsers(res.data);
         } catch (err) {
             console.error(err);
@@ -60,7 +97,7 @@ const AdminPanel = () => {
         e.preventDefault();
         setLoading(true);
         try {
-            await axios.post('https://code-route-rho.vercel.app//api/categories', newCategory);
+            await axios.post(`${API_BASE_URL}/categories`, newCategory);
             setMessage('تم إضافة الصنف بنجاح');
             setNewCategory({ category: '', description: '', image: '' });
             fetchCategories();
@@ -80,7 +117,7 @@ const AdminPanel = () => {
         }
         setLoading(true);
         try {
-            await axios.post('https://code-route-rho.vercel.app//api/topics', newTopic);
+            await axios.post(`${API_BASE_URL}/topics`, newTopic);
             setMessage('تم إضافة الموضوع بنجاح');
             const currentCat = newTopic.category;
             setNewTopic({ name: '', category: currentCat, image: '' });
@@ -96,7 +133,7 @@ const AdminPanel = () => {
     const handleDeleteCategory = async (id) => {
         if (window.confirm('هل أنت متأكد من حذف هذا الصنف؟')) {
             try {
-                await axios.delete(`https://code-route-rho.vercel.app//api/categories/${id}`);
+                await axios.delete(`${API_BASE_URL}/categories/${id}`);
                 fetchCategories();
             } catch (err) {
                 alert('فشل في الحذف');
@@ -107,7 +144,7 @@ const AdminPanel = () => {
     const handleDeleteTopic = async (id) => {
         if (window.confirm('هل أنت متأكد من حذف هذا الموضوع؟')) {
             try {
-                await axios.delete(`https://code-route-rho.vercel.app//api/topics/${id}`);
+                await axios.delete(`${API_BASE_URL}/topics/${id}`);
                 fetchTopics();
             } catch (err) {
                 alert('فشل في الحذف');
@@ -124,8 +161,8 @@ const AdminPanel = () => {
         setLoading(true);
         const { type, data } = editingItem;
         const url = type === 'category'
-            ? `https://code-route-rho.vercel.app//api/categories/${data._id}`
-            : `https://code-route-rho.vercel.app//api/topics/${data._id}`;
+            ? `${API_BASE_URL}/categories/${data._id}`
+            : `${API_BASE_URL}/topics/${data._id}`;
 
         try {
             await axios.put(url, data);
@@ -188,12 +225,29 @@ const AdminPanel = () => {
                                         </select>
                                     </>
                                 )}
-                                <input
-                                    type="text"
-                                    value={editingItem.data.image}
-                                    onChange={(e) => setEditingItem({ ...editingItem, data: { ...editingItem.data, image: e.target.value } })}
-                                    placeholder="رابط الصورة"
-                                />
+                                <div style={{ display: 'flex', gap: '10px' }}>
+                                    <input
+                                        type="text"
+                                        value={editingItem.data.image}
+                                        onChange={(e) => setEditingItem({ ...editingItem, data: { ...editingItem.data, image: e.target.value } })}
+                                        placeholder="رابط الصورة"
+                                        style={{ flex: 1 }}
+                                    />
+                                    <input
+                                        type="file"
+                                        style={{ display: 'none' }}
+                                        id="edit-file-upload"
+                                        onChange={async (e) => {
+                                            if (e.target.files[0]) {
+                                                const url = await uploadToImgBB(e.target.files[0]);
+                                                if (url) setEditingItem({ ...editingItem, data: { ...editingItem.data, image: url } });
+                                            }
+                                        }}
+                                    />
+                                    <label htmlFor="edit-file-upload" className="upload-btn-label">
+                                        {uploading ? '⌛' : '📁'}
+                                    </label>
+                                </div>
                                 <div className="modal-actions">
                                     <button type="submit" className="save-btn" disabled={loading}>حفظ التعديلات</button>
                                     <button type="button" className="cancel-btn" onClick={() => setEditingItem(null)}>إلغاء</button>
@@ -243,12 +297,29 @@ const AdminPanel = () => {
                                 onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
                                 required
                             />
-                            <input
-                                type="text"
-                                placeholder="رابط الصورة"
-                                value={newCategory.image}
-                                onChange={(e) => setNewCategory({ ...newCategory, image: e.target.value })}
-                            />
+                            <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
+                                <input
+                                    type="text"
+                                    placeholder="رابط الصورة"
+                                    value={newCategory.image}
+                                    onChange={(e) => setNewCategory({ ...newCategory, image: e.target.value })}
+                                    style={{ flex: 1, marginBottom: 0 }}
+                                />
+                                <input
+                                    type="file"
+                                    style={{ display: 'none' }}
+                                    id="cat-file-upload"
+                                    onChange={async (e) => {
+                                        if (e.target.files[0]) {
+                                            const url = await uploadToImgBB(e.target.files[0]);
+                                            if (url) setNewCategory({ ...newCategory, image: url });
+                                        }
+                                    }}
+                                />
+                                <label htmlFor="cat-file-upload" className="upload-btn-label">
+                                    {uploading ? 'جاري الرفع...' : 'رفع صورة'}
+                                </label>
+                            </div>
                             <button type="submit" disabled={loading}>
                                 {loading ? 'جاري الإضافة...' : 'إضافة الصنف'}
                             </button>
@@ -299,12 +370,29 @@ const AdminPanel = () => {
                                 ))}
                             </select>
 
-                            <input
-                                type="text"
-                                placeholder="رابط الصورة"
-                                value={newTopic.image}
-                                onChange={(e) => setNewTopic({ ...newTopic, image: e.target.value })}
-                            />
+                            <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
+                                <input
+                                    type="text"
+                                    placeholder="رابط الصورة"
+                                    value={newTopic.image}
+                                    onChange={(e) => setNewTopic({ ...newTopic, image: e.target.value })}
+                                    style={{ flex: 1, marginBottom: 0 }}
+                                />
+                                <input
+                                    type="file"
+                                    style={{ display: 'none' }}
+                                    id="topic-file-upload"
+                                    onChange={async (e) => {
+                                        if (e.target.files[0]) {
+                                            const url = await uploadToImgBB(e.target.files[0]);
+                                            if (url) setNewTopic({ ...newTopic, image: url });
+                                        }
+                                    }}
+                                />
+                                <label htmlFor="topic-file-upload" className="upload-btn-label">
+                                    {uploading ? 'جاري الرفع...' : 'رفع صورة'}
+                                </label>
+                            </div>
                             <button type="submit" disabled={loading}>
                                 {loading ? 'جاري الإضافة...' : 'إضافة الموضوع'}
                             </button>

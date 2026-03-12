@@ -2,10 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import Navbar from '../comp/navbar';
 import axios from 'axios';
+import { API_BASE_URL } from '../config';
 
 // دالة مساعدة لتجزئة الباراميتر
 const parseCategoryParam = (param) => {
     if (!param) return { category1: '', category2: '' };
+
+    // Check if it contains a separator
+    if (!param.includes(' / ')) {
+        return { category1: param.trim(), category2: '' };
+    }
+
     const parts = param.split(' / ').map(p => p.trim());
 
     let category1 = '';
@@ -43,7 +50,7 @@ export default function ExamenSeries() {
 
     useEffect(() => {
         const fetchSeries = async () => {
-            if (!category1 || !category2) {
+            if (!category1) {
                 setError('فئة غير صحيحة.');
                 setLoading(false);
                 return;
@@ -51,7 +58,7 @@ export default function ExamenSeries() {
 
             try {
                 // استدعاء الـ API الجديد لجلب السلاسل
-                const response = await axios.get('https://code-route-rho.vercel.app/api/quiz/series', {
+                const response = await axios.get(`${API_BASE_URL}/quiz/series`, {
                     params: { category1, category2 }
                 });
 

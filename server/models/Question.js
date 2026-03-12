@@ -33,13 +33,13 @@ const QuestionSchema = new mongoose.Schema({
     },
     category2: {
         type: String,
-        required: [true, 'الموضوع الفرعي مطلوب'],
+        default: '',
         trim: true
     },
     nb_serie: {
         type: Number,
         required: true,
-    
+
     },
     options: {
         type: [OptionSchema], // مصفوفة من خيارات الإجابة

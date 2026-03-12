@@ -5,13 +5,16 @@ import Navbar from '../comp/navbar';
 import { FaChevronRight, FaChevronLeft, FaTimesCircle, FaCheckCircle, FaArrowRight } from 'react-icons/fa';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { API_BASE_URL } from '../config';
 // import '../styles/ExamenTest.css'; // تأكد من استيراد الأنماط
 
-const API_URL = 'https://code-route-rho.vercel.app/api/quiz/questions';
+const API_URL = `${API_BASE_URL}/quiz/questions`;
 const FREE_TRIAL_LIMIT = 3; // ⭐️ تحديد الحد المجاني للاختبار (يمكنك تعديله)
 
 // ⭐️ دالة مساعدة لتجزئة الباراميتر المدمج
 const parseCategoryParam = (param) => {
+    if (!param) return { category1: '', category2: '' };
+
     const parts = param.split(' / ').map(p => p.trim()).filter(p => p.length > 0);
 
     let category1 = '';
@@ -24,8 +27,8 @@ const parseCategoryParam = (param) => {
         category1 = parts[0];
         category2 = parts[1];
     } else {
-        category1 = parts[0] || 'Unknown';
-        category2 = parts[1] || 'Unknown';
+        category1 = parts[0] || '';
+        category2 = '';
     }
 
     return { category1, category2 };
@@ -74,7 +77,7 @@ export default function Examen_test() {
 
             const { category1, category2 } = parseCategoryParam(rawCategoryParam || '');
 
-            if (!category1 || !category2) {
+            if (!category1) {
                 setLoading(false);
                 return setError('الرابط غير مكتمل.');
             }
@@ -241,7 +244,7 @@ export default function Examen_test() {
             <Navbar />
             <div className="quiz-container">
                 <div className="quiz-header">
-                    <h2>اختبار رخصة القيادة: {mainCategory} - {currentTopic}</h2>
+                    <h2>اختبار رخصة القيادة: {mainCategory} {currentTopic && `- ${currentTopic}`}</h2>
 
                     <h3>Serie {(new URLSearchParams(location.search).get('nb_serie') || '1')}</h3>
 
@@ -361,7 +364,7 @@ export default function Examen_test() {
                 {/* أزرار التنقل بين الأسئلة في الأسفل */}
                 <div className="quiz-navigation">
                     <button onClick={handlePrev} disabled={currentQuestionIndex === 0} className="nav-button">
-                        <FaChevronRight /> السابق
+                        <FaChevronRight /><span> السdsdابق</span>
                     </button>
 
                     <button
@@ -380,7 +383,7 @@ export default function Examen_test() {
                         disabled={currentQuestionIndex === visibleQuestionCount - 1}
                         className="nav-button next-button"
                     >
-                        التالي <FaChevronLeft />
+                        <span>التالي</span> <FaChevronLeft />
                     </button>
                 </div>
             </div>

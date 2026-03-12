@@ -2,10 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import Navbar from '../comp/navbar';
 import axios from 'axios';
+import { API_BASE_URL } from '../config';
 
 // دالة مساعدة لتجزئة الباراميتر
 const parseCategoryParam = (param) => {
     if (!param) return { category1: '', category2: '' };
+
+    // Check if it contains a separator
+    if (!param.includes(' / ')) {
+        return { category1: param.trim(), category2: '' };
+    }
+
     const parts = param.split(' / ').map(p => p.trim());
 
     let category1 = '';
@@ -24,6 +31,57 @@ const parseCategoryParam = (param) => {
     return { category1, category2 };
 };
 
+// مكون البطاقة لتسهيل حالة الـ checkmark
+function SerieCard({ serieNum, isLocked, categoryParam, isLoggedIn }) {
+    const [isChecked, setIsChecked] = useState(() => {
+        const saved = localStorage.getItem(`checked_serie_${categoryParam}_${serieNum}`);
+        return saved === 'true';
+    });
+
+    const toggleCheck = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const newValue = !isChecked;
+        setIsChecked(newValue);
+        localStorage.setItem(`checked_serie_${categoryParam}_${serieNum}`, newValue);
+    };
+
+    return (
+        <Link
+            key={serieNum}
+            to={!isLocked ? `/serie?category=${encodeURIComponent(categoryParam)}&nb_serie=${serieNum}` : '#'}
+            className={`card-link ${isChecked ? 'card-checked' : ''}`}
+            style={isLocked ? { cursor: 'not-allowed', opacity: 0.7 } : {}}
+            onClick={(e) => {
+                if (isLocked && isLoggedIn) {
+                    e.preventDefault();
+                    alert("هذه السلسلة متاحة للمشتركين فقط. يرجى الاشتراك لفتح جميع السلاسل.");
+                }
+            }}
+        >
+            <div
+                className={`checkmark-btn ${isChecked ? 'checked' : ''}`}
+                onClick={toggleCheck}
+                title="حدد كمكتمل"
+            >
+                <span className="checkmark-icon">{isChecked ? '✓' : '✓'}</span>
+            </div>
+            <div className="license-card" style={{ justifyContent: 'center', height: '180px' }}>
+                <div className="card-info" style={{ alignItems: 'center' }}>
+                    <h3 className="card-category" style={{ fontSize: '2em', marginBottom: '10px' }}>
+                        السلسلة {serieNum}
+                    </h3>
+                    {isLocked ? (
+                        <span style={{ fontSize: '1.5em' }}>🔒</span>
+                    ) : (
+                        <span style={{ color: 'var(--success-color)', fontWeight: 'bold' }}></span>
+                    )}
+                </div>
+            </div>
+        </Link>
+    );
+}
+
 export default function CoursSeries() {
     const location = useLocation();
     const [series, setSeries] = useState([]);
@@ -40,7 +98,7 @@ export default function CoursSeries() {
 
     useEffect(() => {
         const fetchSeries = async () => {
-            if (!category1 || !category2) {
+            if (!category1) {
                 setError('فئة غير صحيحة.');
                 setLoading(false);
                 return;
@@ -48,7 +106,7 @@ export default function CoursSeries() {
 
             try {
                 // استدعاء الـ API لجلب السلاسل (نفس API الامتحانات)
-                const response = await axios.get('https://code-route-rho.vercel.app/api/quiz/series', {
+                const response = await axios.get(`${API_BASE_URL}/quiz/series`, {
                     params: { category1, category2 }
                 });
                 setSeries(response.data);
@@ -97,34 +155,13 @@ export default function CoursSeries() {
                         const isLocked = !isSubscribed && serieNum > 1;
 
                         return (
-                            <Link
+                            <SerieCard
                                 key={serieNum}
-                                // التوجيه لصفحة الـ Serie (الدرس) مع تمرير السلسلة المختارة
-                                to={!isLocked ? `/serie?category=${encodeURIComponent(categoryParam)}&nb_serie=${serieNum}` : '#'}
-                                className="card-link"
-                                style={isLocked ? { cursor: 'not-allowed', opacity: 0.7 } : {}}
-                                onClick={(e) => {
-                                    if (isLocked && isLoggedIn) {
-                                        e.preventDefault();
-                                        alert("هذه السلسلة متاحة للمشتركين فقط. يرجى الاشتراك لفتح جميع السلاسل.");
-                                    } else if (!isLoggedIn) {
-                                        // التعامل مع غير المسجلين
-                                    }
-                                }}
-                            >
-                                <div className="license-card" style={{ justifyContent: 'center', height: '180px' }}>
-                                    <div className="card-info" style={{ alignItems: 'center' }}>
-                                        <h3 className="card-category" style={{ fontSize: '2em', marginBottom: '10px' }}>
-                                            السلسلة {serieNum}
-                                        </h3>
-                                        {isLocked ? (
-                                            <span style={{ fontSize: '1.5em' }}>🔒</span>
-                                        ) : (
-                                            <span style={{ color: 'var(--success-color)', fontWeight: 'bold' }}></span>
-                                        )}
-                                    </div>
-                                </div>
-                            </Link>
+                                serieNum={serieNum}
+                                isLocked={isLocked}
+                                categoryParam={categoryParam}
+                                isLoggedIn={isLoggedIn}
+                            />
                         );
                     })}
                 </div>

@@ -253,3 +253,26 @@
     color: #34d399;
     text-align: center;
 }
+
+.upload-btn-label {
+    padding: 12px 15px;
+    background: #3b82f6;
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    min-width: 45px;
+}
+
+.upload-btn-label:hover {
+    background: #2563eb;
+    transform: scale(1.05);
+}
+
+.upload-btn-label:active {
+    transform: scale(0.95);
+}

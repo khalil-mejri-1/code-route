@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom'; // 1. Importer useNavigate
 import axios from 'axios'; // ⭐️ Import Axios
+import { API_BASE_URL } from '../config';
 import Navbar from './navbar';
 
 
@@ -41,7 +42,7 @@ const SignUp = ({ onToggleMode }) => {
 
         try {
             // ⭐️ Real Backend Call
-            await axios.post('https://code-route-rho.vercel.app/api/auth/signup', {
+            await axios.post(`${API_BASE_URL}/auth/signup`, {
                 fullName,
                 email,
                 password

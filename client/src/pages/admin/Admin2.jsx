@@ -1,17 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Navbar from '../../comp/navbar.jsx';
 import axios from 'axios';
+import { API_BASE_URL, IMGBB_API_KEY, IMGBB_UPLOAD_URL } from '../../config';
 
-// Constants from QuestionForm
-const IMGBB_API_KEY = '4a45d9a01860c9fdd4642c1d51b46995';
-const IMGBB_UPLOAD_URL = 'https://api.imgbb.com/1/upload';
-const API_BASE_URL = window.location.hostname === 'localhost'
-    ? 'https://code-route-rho.vercel.app//api'
-    : 'https://code-route-rho.vercel.app/api';
 const API_URL_BATCH = `${API_BASE_URL}/quiz/questions/batch`;
 
 const LICENSE_TYPES = [
-    "B", "A / A1", "A1 / AM", "B+E", "C / C1", "C+E / C1+E", "D", "D1", "D+E / D1+E"
+    "B", "A", "AA", "Z", "D", "CE", "C"
 ];
 
 const TOPIC_CATEGORIES = [
@@ -77,8 +72,38 @@ export default function Admin2() {
     const [submitMessage, setSubmitMessage] = useState('');
     const [submitError, setSubmitError] = useState('');
 
+    // Category Management State
+    const [allCategories, setAllCategories] = useState([]);
+    const [editingCategory, setEditingCategory] = useState(null); // { _id, category, description, image }
+    const [catMessage, setCatMessage] = useState('');
+
+    const fetchAllCategories = async () => {
+        try {
+            const res = await axios.get(`${API_BASE_URL}/categories`);
+            setAllCategories(res.data);
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    useEffect(() => {
+        fetchAllCategories();
+    }, []);
+
+    const handleUpdateCategory = async (id) => {
+        try {
+            await axios.put(`${API_BASE_URL}/categories/${id}`, editingCategory);
+            setCatMessage('تم التحديث بنجاح!');
+            setEditingCategory(null);
+            fetchAllCategories();
+            setTimeout(() => setCatMessage(''), 2000);
+        } catch (err) {
+            alert('فشل في التحديث');
+        }
+    };
+
     // Deletion State
-    const [deleteCategory, setDeleteCategory] = useState(TOPIC_CATEGORIES[7]);
+    const [deleteCategory, setDeleteCategory] = useState(LICENSE_TYPES[0]);
     const [deleteSerie, setDeleteSerie] = useState('1');
     const [deleting, setDeleting] = useState(false);
     const [deleteStatus, setDeleteStatus] = useState('');
@@ -94,12 +119,17 @@ export default function Admin2() {
             if (trimmed.length === 1) return false;
 
             // --- Junk Filters ---
-            if (/dell/i.test(trimmed)) return false; // Remove "Dell", "DELL", "DeLL", etc.
+            if (/dell/i.test(trimmed)) return false;
             if (trimmed.includes('codedelaroute') || trimmed.includes('Code de la route')) return false;
             if (trimmed.includes('الاجابات الخاطلة')) return false;
             if (trimmed.includes('اجابتك هى') || trimmed.includes('Votre réponse')) return false;
             if (trimmed.includes('الاستغبال') || trimmed.includes('إشارات الطريق')) return false;
             if (/Serie\s+\d+/i.test(trimmed)) return false;
+
+            // New Filters for common OCR noise
+            if (/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(trimmed)) return false; // Match dates: 10/11/2025
+            if (/^[A-Z]{2}$/.test(trimmed)) return false; // Match language codes: FR, EN, AR
+            if (/^\d{1,2}:\d{2}$/.test(trimmed)) return false; // Match standalone times: 09:52
 
             return true;
         });
@@ -114,16 +144,18 @@ export default function Admin2() {
         const keywordIndex = cleaned.findIndex(l => /Serie|onse/i.test(l));
 
         // Rule 1: Search for Colon (:)
-        // We search from the bottom up to find the "Question" colon and avoid "Header" colons.
-        // We also ensure there are at least 2 lines after the colon line (answers), 
-        // to avoid picking a colon inside one of the last answer options.
         let colonIndex = -1;
+        const timeRegex = /\b\d{1,2}:\d{2}\b/;
+
         for (let i = cleaned.length - 1; i >= 0; i--) {
-            if (cleaned[i].includes(':')) {
-                // Check if there are at least 1 line below it (User usually has Question + Opt1 + Opt2)
-                // Let's stick to >= 1 to be safe (One True/False question?), but user examples imply multiple lines.
-                // If we prioritize "Last valid question colon", this works.
-                // Let's try >= 1 (so index < length - 1)
+            const line = cleaned[i];
+            if (line.includes(':')) {
+                // CRITICAL: Ignore if the line is just a time (e.g. 09:52) 
+                // so we don't pick it as the question start.
+                if (timeRegex.test(line) && line.length < 10) {
+                    continue;
+                }
+
                 if (cleaned.length - 1 - i >= 1) {
                     colonIndex = i;
                     break;
@@ -177,6 +209,13 @@ export default function Admin2() {
         // This ensures "في " (2 chars) is NOT matched (no space after first char), but "بـ " (char+tatweel) IS matched.
         result = result.map(line => line.replace(/^([a-zA-Z\u0600-\u065F\u066A-\u06FF]\u0640?\s+)+/, ''));
 
+        // --- NEW: Time truncation (e.g. 09:52) ---
+        // If we find a line suggesting time below the question (index 0), delete it and everything after it.
+        const timeIndex = result.findIndex((line, idx) => idx > 0 && timeRegex.test(line));
+        if (timeIndex !== -1) {
+            result = result.slice(0, timeIndex);
+        }
+
         setOutputText(result.join('\n'));
         setStatusMessage(method);
     };
@@ -196,10 +235,39 @@ export default function Admin2() {
     };
 
     const uploadImage = async (file) => {
-        const formData = new FormData();
-        formData.append('image', file);
-        const res = await axios.post(`${IMGBB_UPLOAD_URL}?key=${IMGBB_API_KEY}`, formData);
-        return res.data.data.url;
+        // تحويل الصورة إلى base64
+        const base64 = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result.split(',')[1]);
+            reader.onerror = (error) => reject(error);
+            reader.readAsDataURL(file);
+        });
+
+        // إرسالها كـ URLSearchParams لضمان أعلى توافق
+        const params = new URLSearchParams();
+        params.append('image', base64);
+
+        try {
+            const response = await fetch(`${IMGBB_UPLOAD_URL}?key=${IMGBB_API_KEY}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: params.toString()
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                return result.data.url;
+            } else {
+                console.error("ImgBB Error Detail:", result);
+                throw new Error(`ImgBB Error: ${result.error.message}`);
+            }
+        } catch (error) {
+            console.error("Upload error:", error);
+            throw error;
+        }
     };
 
     const handleSubmit = async () => {
@@ -208,14 +276,21 @@ export default function Admin2() {
         setSubmitError('');
 
         try {
+            // --- NEW: Better Validation ---
+            if (!metaData.nbSerie || isNaN(parseInt(metaData.nbSerie))) {
+                throw new Error("الرجاء إدخال رقم سلسلة صحيح.");
+            }
+            if (!metaData.category1) {
+                throw new Error("الرجاء اختيار الفئة 1.");
+            }
+            if (metaData.category1 === 'B' && !metaData.category2) {
+                throw new Error("الرجاء اختيار الفئة 2 (الموضوع) عند اختيار الصنف B.");
+            }
+
             // 1. Validate Text
             const lines = outputText.split('\n').map(l => l.trim()).filter(l => l);
             if (lines.length < 2) {
-                setSubmitError("النص المستخرج قصير جداً. يجب أن يحتوي على الأقل على سؤال وإجابة واحدة.");
-                setTimeout(() => {
-                    setSubmitError('');
-                }, 2000);
-                return;
+                throw new Error("النص المستخرج قصير جداً. يجب أن يحتوي على الأقل على سؤال وإجابة واحدة.");
             }
 
             // 2. Validate Image
@@ -281,7 +356,9 @@ export default function Admin2() {
 
         } catch (err) {
             console.error(err);
-            setSubmitError(err.message || 'حدث خطأ أثناء الإرسال');
+            const backendError = err.response?.data?.error;
+            const backendMessage = err.response?.data?.message;
+            setSubmitError(backendError ? `${backendMessage}: ${backendError}` : (backendMessage || err.message || 'حدث خطأ أثناء الإرسال'));
         } finally {
             setSubmitting(false);
         }
@@ -303,7 +380,7 @@ export default function Admin2() {
 
             // 2. Filter
             const toDelete = allQuestions.filter(q =>
-                q.category2 === deleteCategory &&
+                q.category1 === deleteCategory &&
                 q.nb_serie.toString() === deleteSerie.toString()
             );
 
@@ -441,20 +518,34 @@ export default function Admin2() {
                             <label style={styles.label}>الفئة 1 (Vehicle):</label>
                             <select
                                 value={metaData.category1}
-                                onChange={e => setMetaData({ ...metaData, category1: e.target.value })}
+                                onChange={e => {
+                                    const newVal = e.target.value;
+                                    setMetaData(prev => ({
+                                        ...prev,
+                                        category1: newVal,
+                                        category2: newVal !== 'B' ? '' : prev.category2
+                                    }));
+                                }}
                                 style={styles.input}
                             >
-                                {LICENSE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                                {allCategories.length > 0 ? (
+                                    allCategories.map(c => <option key={c._id} value={c.category}>{c.category}</option>)
+                                ) : (
+                                    LICENSE_TYPES.map(t => <option key={t} value={t}>{t}</option>)
+                                )}
                             </select>
 
-                            <label style={styles.label}>الفئة 2 (Topic):</label>
-                            <select
-                                value={metaData.category2}
-                                onChange={e => setMetaData({ ...metaData, category2: e.target.value })}
-                                style={styles.input}
-                            >
-                                {TOPIC_CATEGORIES.map(t => <option key={t} value={t}>{t}</option>)}
-                            </select>
+                            <div style={{ visibility: metaData.category1 === 'B' ? 'visible' : 'hidden', minHeight: '80px' }}>
+                                <label style={styles.label}>الفئة 2 (Topic):</label>
+                                <select
+                                    value={metaData.category2}
+                                    onChange={e => setMetaData({ ...metaData, category2: e.target.value })}
+                                    style={styles.input}
+                                >
+                                    <option value="">-- اختر الفئة 2 --</option>
+                                    {TOPIC_CATEGORIES.map(t => <option key={t} value={t}>{t}</option>)}
+                                </select>
+                            </div>
                         </div>
 
                         <div style={styles.section}>
@@ -479,18 +570,70 @@ export default function Admin2() {
                             )}
                         </div>
 
+                        {/* --- Category Management Section --- */}
+                        <div style={styles.section}>
+                            <h3 style={{ color: '#007bff' }}>📁 إدارة أسماء الفئات (Categories)</h3>
+                            <p style={{ fontSize: '0.8em', color: '#666', marginBottom: '15px' }}>تغيير أسماء وصور الفئات التي تظهر في صفحة الدروس والاختبارات.</p>
+
+                            {catMessage && <div style={{ ...styles.success, marginBottom: '10px' }}>{catMessage}</div>}
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                {allCategories.map(cat => (
+                                    <div key={cat._id} style={{ padding: '10px', border: '1px solid #eee', borderRadius: '5px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        {editingCategory?._id === cat._id ? (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', width: '100%' }}>
+                                                <input
+                                                    style={{ ...styles.input, marginBottom: '5px' }}
+                                                    value={editingCategory.category}
+                                                    onChange={e => setEditingCategory({ ...editingCategory, category: e.target.value })}
+                                                    placeholder="اسم الفئة"
+                                                />
+                                                <input
+                                                    style={{ ...styles.input, marginBottom: '5px' }}
+                                                    value={editingCategory.description}
+                                                    onChange={e => setEditingCategory({ ...editingCategory, description: e.target.value })}
+                                                    placeholder="الوصف"
+                                                />
+                                                <div style={{ display: 'flex', gap: '5px' }}>
+                                                    <button onClick={() => handleUpdateCategory(cat._id)} style={{ ...styles.button, backgroundColor: '#28a745', flex: 1 }}>حفظ</button>
+                                                    <button onClick={() => setEditingCategory(null)} style={{ ...styles.button, backgroundColor: '#6c757d', flex: 1 }}>إلغاء</button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <div>
+                                                    <strong>{cat.category}</strong>
+                                                    <div style={{ fontSize: '0.8em', color: '#888' }}>{cat.description}</div>
+                                                </div>
+                                                <button
+                                                    onClick={() => setEditingCategory(cat)}
+                                                    style={{ padding: '5px 10px', backgroundColor: '#ffc107', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                                                >
+                                                    تعديل
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
                         <hr style={{ margin: '30px 0' }} />
 
                         <div style={{ ...styles.section, border: '1px solid #dc3545', backgroundColor: '#fff5f5' }}>
                             <h3 style={{ color: '#dc3545' }}>🗑️ حذف دفعة (Batch Delete)</h3>
 
-                            <label style={styles.label}>الفئة للحذف:</label>
+                            <label style={styles.label}>الفئة 1 (Vehicle) للحذف:</label>
                             <select
                                 value={deleteCategory}
                                 onChange={e => setDeleteCategory(e.target.value)}
                                 style={styles.input}
                             >
-                                {TOPIC_CATEGORIES.map(t => <option key={t} value={t}>{t}</option>)}
+                                {allCategories.length > 0 ? (
+                                    allCategories.map(c => <option key={c._id} value={c.category}>{c.category}</option>)
+                                ) : (
+                                    LICENSE_TYPES.map(t => <option key={t} value={t}>{t}</option>)
+                                )}
                             </select>
 
                             <label style={styles.label}>رقم السلسلة للحذف:</label>

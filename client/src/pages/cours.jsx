@@ -1,12 +1,12 @@
-// src/pages/cours.jsx
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../comp/navbar';
 import axios from 'axios';
+import { API_BASE_URL } from '../config';
 
 // 2. مكون البطاقة الفردية (CardComponent)
 function CardComponent({ id, category, description, image, isLoggedIn, isSubscribed }) {
-
+    const navigate = useNavigate();
     let isCardDisabled;
     let overlayMessage;
 
@@ -16,9 +16,8 @@ function CardComponent({ id, category, description, image, isLoggedIn, isSubscri
         // الحالة 1: غير مسجل للدخول
         isCardDisabled = true;
         overlayMessage = "سجّل الدخول للمتابعة";
-    } else if (!isSubscribed && id !== 1 && category !== "B") {
-        // الحالة 2: مسجل، ولكنه غير مشترك، والصنف ليس مجانياً (id != 1)
-        // أضفت فحص category !== "B" كحالة احتياطية إذا تغيرت الـ id
+    } else if (!isSubscribed && category !== "B") {
+        // الحالة 2: مسجل، ولكنه غير مشترك، والصنف ليس مجانياً
         isCardDisabled = true;
         overlayMessage = "هذا الصنف متاح للمشتركين فقط";
     } else {
@@ -27,19 +26,56 @@ function CardComponent({ id, category, description, image, isLoggedIn, isSubscri
         overlayMessage = "";
     }
 
+    const [isChecked, setIsChecked] = useState(() => {
+        const saved = localStorage.getItem(`checked_course_${category}`);
+        return saved === 'true';
+    });
 
-    const cardClassName = `card-link ${isCardDisabled ? 'card-disabled' : ''}`;
+    const toggleCheck = (e) => {
+        e.stopPropagation();
+        const newValue = !isChecked;
+        setIsChecked(newValue);
+        localStorage.setItem(`checked_course_${category}`, newValue);
+    };
 
-    // استخدام المكون Link فقط إذا لم تكن البطاقة معطلة
-    const Wrapper = isCardDisabled ? 'div' : Link;
+    const handleCardClick = async (e) => {
+        if (isCardDisabled) {
+            e.preventDefault();
+            return;
+        }
 
-    // إعداد خصائص الرابط
-    const linkProps = !isCardDisabled
-        ? { to: `/Cours_question?category=${encodeURIComponent(category)}` }
-        : {};
+        try {
+            // Check if there are sub-topics for this category
+            const response = await axios.get(`${API_BASE_URL}/topics?category=${encodeURIComponent(category)}`);
+            const topics = response.data;
+
+            if (topics.length === 0) {
+                // No sub-topics? Go directly to series selection
+                navigate(`/cours/series?category=${encodeURIComponent(category)}`);
+            } else {
+                // Has sub-topics? Go to topics selection page
+                navigate(`/Cours_question?category=${encodeURIComponent(category)}`);
+            }
+        } catch (error) {
+            console.error("Error checking topics:", error);
+            // Default to topics page if check fails
+            navigate(`/Cours_question?category=${encodeURIComponent(category)}`);
+        }
+    };
 
     return (
-        <Wrapper {...linkProps} className={cardClassName}>
+        <div
+            onClick={handleCardClick}
+            className={`card-link ${isCardDisabled ? 'card-disabled' : ''} ${isChecked ? 'card-checked' : ''}`}
+            style={{ cursor: isCardDisabled ? 'not-allowed' : 'pointer' }}
+        >
+            <div
+                className={`checkmark-btn ${isChecked ? 'checked' : ''}`}
+                onClick={toggleCheck}
+                title="حدد كمكتمل"
+            >
+                <span className="checkmark-icon">{isChecked ? '✓' : '✓'}</span>
+            </div>
             <div className="license-card">
                 <div className="card-image-container">
                     <img
@@ -60,7 +96,7 @@ function CardComponent({ id, category, description, image, isLoggedIn, isSubscri
                     {overlayMessage}
                 </div>
             )}
-        </Wrapper>
+        </div>
     );
 }
 
@@ -76,7 +112,7 @@ export default function Cours() {
     useEffect(() => {
         const fetchCategories = async () => {
             try {
-                const response = await axios.get('https://code-route-rho.vercel.app//api/categories');
+                const response = await axios.get(`${API_BASE_URL}/categories`);
                 setLicenseCategories(response.data);
             } catch (error) {
                 console.error('Error fetching categories:', error);

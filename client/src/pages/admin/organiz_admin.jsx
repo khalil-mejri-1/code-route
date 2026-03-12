@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './OrganizAdmin.css';
-
-const API_BASE_URL = 'https://code-route-rho.vercel.app/api';
+import { API_BASE_URL } from '../../config';
 
 const CATEGORIES = [
     "العلامات و الاشارات",
@@ -28,31 +27,31 @@ const HiddenQuestionsModal = ({ hiddenQuestions, onClose, onRestoreAll }) => {
                     <h2>الأسئلة المخفية مؤقتًا ({hiddenQuestions.length})</h2>
                     <button className="modal-close-button" onClick={onClose}>&times;</button>
                 </div>
-                
+
                 <div className="modal-actions">
-                    <button 
-                        className="restore-all-button" 
+                    <button
+                        className="restore-all-button"
                         onClick={onRestoreAll}
                         disabled={hiddenQuestions.length === 0}
                     >
-                        ↩️ استعادة عرض الكل 
+                        ↩️ استعادة عرض الكل
                     </button>
                 </div>
-                
+
                 <div className="modal-body">
                     {hiddenQuestions.length === 0 ? (
-                        <p style={{textAlign: 'center', color: '#666'}}>لا توجد أسئلة مخفية حاليًا.</p>
+                        <p style={{ textAlign: 'center', color: '#666' }}>لا توجد أسئلة مخفية حاليًا.</p>
                     ) : (
                         <div className="hidden-questions-list">
                             {hiddenQuestions.map(q => (
                                 <div key={q._id} className="hidden-question-item">
                                     <div className="hidden-question-content">
-                                        
+
                                         {/* الصورة */}
                                         {q.image && (
                                             <div className="hidden-question-image-container">
-                                                <img 
-                                                    src={q.image} 
+                                                <img
+                                                    src={q.image}
                                                     alt={`صورة السؤال: ${q.question}`}
                                                     className="hidden-question-image"
                                                 />
@@ -106,6 +105,22 @@ const UpdateQuestionModal = ({ question, onClose, onUpdateQuestion }) => {
         setFormData(prev => ({ ...prev, options: newOptions }));
     };
 
+    const handleRemoveOption = (index) => {
+        if (formData.options.length <= 1) {
+            alert("يجب أن يكون هناك خيار واحد على الأقل.");
+            return;
+        }
+        const newOptions = formData.options.filter((_, i) => i !== index);
+        setFormData(prev => ({ ...prev, options: newOptions }));
+    };
+
+    const handleAddOption = () => {
+        setFormData(prev => ({
+            ...prev,
+            options: [...prev.options, { text: '', isCorrect: false }]
+        }));
+    };
+
     const handleCorrectToggle = (index) => {
         const newOptions = formData.options.map((opt, i) => ({
             ...opt,
@@ -117,7 +132,7 @@ const UpdateQuestionModal = ({ question, onClose, onUpdateQuestion }) => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setStatus({ type: 'loading', message: '🔄 جارٍ تحديث السؤال...' });
-        
+
         try {
             await onUpdateQuestion(question._id, formData);
             setStatus({ type: 'success', message: '✅ تم تحديث السؤال بنجاح!' });
@@ -127,7 +142,7 @@ const UpdateQuestionModal = ({ question, onClose, onUpdateQuestion }) => {
             setStatus({ type: 'error', message: `❌ فشل التحديث: ${errorMsg}` });
         }
     };
-    
+
     return (
         <div className="modal-overlay" onClick={onClose}>
             <div className="modal-content update-modal-content" onClick={(e) => e.stopPropagation()}>
@@ -137,55 +152,55 @@ const UpdateQuestionModal = ({ question, onClose, onUpdateQuestion }) => {
                 </div>
                 <div className="modal-body">
                     <form onSubmit={handleSubmit} className="update-form">
-                        
+
                         {/* نص السؤال */}
                         <label>
                             نص السؤال:
-                            <textarea 
-                                name="question" 
-                                value={formData.question} 
-                                onChange={handleChange} 
-                                required 
+                            <textarea
+                                name="question"
+                                value={formData.question}
+                                onChange={handleChange}
+                                required
                                 dir="rtl"
                             />
                         </label>
-                        
+
                         {/* رابط الصورة */}
                         <label>
                             رابط الصورة (URL):
-                            <input 
-                                type="text" 
-                                name="image" 
-                                value={formData.image} 
-                                onChange={handleChange} 
+                            <input
+                                type="text"
+                                name="image"
+                                value={formData.image}
+                                onChange={handleChange}
                                 dir="ltr"
                             />
                         </label>
                         {formData.image && (
                             <div className="image-preview-container">
-                                <img src={formData.image} alt="معاينة" className="image-preview"/>
+                                <img src={formData.image} alt="معاينة" className="image-preview" />
                             </div>
                         )}
-                        
+
                         {/* الفئات والسلسلة */}
                         <div className="form-row">
                             <label>
                                 الفئة الأولى (Category1):
-                                <input 
-                                    type="text" 
-                                    name="category1" 
-                                    value={formData.category1} 
-                                    onChange={handleChange} 
-                                    required 
+                                <input
+                                    type="text"
+                                    name="category1"
+                                    value={formData.category1}
+                                    onChange={handleChange}
+                                    required
                                     dir="rtl"
                                 />
                             </label>
                             <label>
                                 الفئة الثانية (Category2):
-                                <select 
-                                    name="category2" 
-                                    value={formData.category2} 
-                                    onChange={handleChange} 
+                                <select
+                                    name="category2"
+                                    value={formData.category2}
+                                    onChange={handleChange}
                                     required
                                 >
                                     {CATEGORIES.map(cat => (
@@ -195,42 +210,60 @@ const UpdateQuestionModal = ({ question, onClose, onUpdateQuestion }) => {
                             </label>
                             <label>
                                 رقم السلسلة:
-                                <input 
-                                    type="number" 
-                                    name="nb_serie" 
-                                    value={formData.nb_serie} 
-                                    onChange={handleChange} 
-                                    required 
+                                <input
+                                    type="number"
+                                    name="nb_serie"
+                                    value={formData.nb_serie}
+                                    onChange={handleChange}
+                                    required
                                 />
                             </label>
                         </div>
 
                         {/* الخيارات */}
                         <fieldset>
-                            <legend>خيارات الإجابة:</legend>
+                            <legend>
+                                خيارات الإجابة:
+                                <button
+                                    type="button"
+                                    className="add-option-button"
+                                    onClick={handleAddOption}
+                                    style={{ marginRight: '10px', fontSize: '0.8em', padding: '2px 8px' }}
+                                >
+                                    ➕ إضافة خيار
+                                </button>
+                            </legend>
                             {formData.options.map((option, index) => (
                                 <div key={index} className="option-edit-row">
-                                    <input 
-                                        type="text" 
-                                        value={option.text} 
+                                    <input
+                                        type="text"
+                                        value={option.text}
                                         onChange={(e) => handleOptionChange(index, e.target.value)}
                                         required
                                         dir="rtl"
                                         placeholder={`الخيار ${index + 1}`}
                                     />
-                                    <button 
+                                    <button
                                         type="button"
                                         className={`correct-toggle-button ${option.isCorrect ? 'is-correct' : ''}`}
                                         onClick={() => handleCorrectToggle(index)}
                                     >
                                         {option.isCorrect ? '✅ صحيح' : '❌ اجعل صحيح'}
                                     </button>
+                                    <button
+                                        type="button"
+                                        className="remove-option-button"
+                                        onClick={() => handleRemoveOption(index)}
+                                        title="حذف الخيار"
+                                    >
+                                        🗑️
+                                    </button>
                                 </div>
                             ))}
                         </fieldset>
-                        
+
                         {status && <p className={`status-message ${status.type}`}>{status.message}</p>}
-                        
+
                         <button type="submit" className="update-submit-button" disabled={status?.type === 'loading'}>
                             {status?.type === 'loading' ? 'جاري الحفظ...' : '💾 حفظ التعديلات'}
                         </button>
@@ -258,19 +291,19 @@ export default function Organiz_admin() {
 
     // الحالة: ID الأسئلة التي تم تبديل صورها بنجاح وهي جاهزة للإخفاء (سنقوم بتجاهلها الآن في العرض)
     const [swappedAndReadyToHide, setSwappedAndReadyToHide] = useState([]);
-    
+
     // الحالة: ID الأسئلة التي تم إخفاؤها مؤقتاً في الجلسة الحالية
     const [hiddenQuestionIds, setHiddenQuestionIds] = useState([]);
-    
+
     // NEW STATE: حالة نافذة الأسئلة المخفية المنبثقة
     const [isModalOpen, setIsModalOpen] = useState(false);
-    
+
     // NEW STATE: حالة نافذة التعديل المنبثقة
     const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
     const [questionToUpdate, setQuestionToUpdate] = useState(null);
 
 
-    
+
     // 1. جلب البيانات عند التحميل (لم يتغير)
     useEffect(() => {
         const fetchQuestions = async () => {
@@ -324,7 +357,7 @@ export default function Organiz_admin() {
     // 3. وظيفة تغيير الإجابة الصحيحة (لم تتغير)
     const handleSwapCorrectAnswer = async (questionId, newCorrectText, event) => {
         event.stopPropagation();
-        
+
         setSwapStatus({ type: 'loading', message: `🔄 جارٍ تعيين "${newCorrectText}" كإجابة صحيحة...` });
 
         try {
@@ -354,10 +387,10 @@ export default function Organiz_admin() {
 
         // 1. إخفاء العنصر مؤقتاً
         setHiddenQuestionIds(prevIds => [...prevIds, idToHide]);
-        
+
         // 2. إزالة العنصر من قائمة التحديد للتبديل (إذا كان موجوداً)
         setSelectedQuestionsForSwap(prevSelected => prevSelected.filter(id => id !== idToHide));
-        
+
         // 3. مسح حالة "جاهز للإخفاء" في حال كانت نقرة الإخفاء بعد التبديل
         setSwappedAndReadyToHide(prevReady => prevReady.filter(id => id !== idToHide));
 
@@ -368,7 +401,7 @@ export default function Organiz_admin() {
 
     // 5. وظيفة النقر على الكارد (مسؤولة فقط عن التحديد) (لم تتغير)
     const handleCardClick = (id) => {
-        
+
         // منطق التحديد لعملية تبديل الصور
         setSelectedQuestionsForSwap(prevSelected => {
             if (prevSelected.includes(id)) {
@@ -385,14 +418,14 @@ export default function Organiz_admin() {
             }
         });
     };
-    
+
     // MODIFIED: وظيفة مسح التحديد فقط (بدون استعادة المخفي)
     const handleClearSelection = () => {
         setSelectedQuestionsForSwap([]);
         setSwapStatus(null);
         setSwappedAndReadyToHide([]);
     };
-    
+
     // NEW: وظيفة استعادة جميع الأسئلة المخفية
     const handleRestoreAllHidden = () => {
         setHiddenQuestionIds([]);
@@ -400,11 +433,11 @@ export default function Organiz_admin() {
         setSwapStatus({ type: 'success', message: '✅ تم استعادة جميع الأسئلة المخفية وعرضها.' });
         setTimeout(() => setSwapStatus(null), 5000);
     };
-    
+
     // ------------------------------------------------------------------
     // ⭐️⭐️ NEW: وظائف التعديل والحذف ⭐️⭐️
     // ------------------------------------------------------------------
-    
+
     // فتح نافذة التعديل
     const handleEditClick = (question, event) => {
         event.stopPropagation();
@@ -416,18 +449,18 @@ export default function Organiz_admin() {
     const handleUpdateQuestion = async (id, updatedData) => {
         try {
             const response = await axios.put(`${API_BASE_URL}/questions/${id}`, updatedData);
-            
+
             // تحديث حالة الأسئلة في الواجهة
-            setQuestions(prevQuestions => prevQuestions.map(q => 
+            setQuestions(prevQuestions => prevQuestions.map(q =>
                 q._id === id ? response.data.question : q
             ));
-            
+
         } catch (error) {
             console.error('Update failed:', error);
             throw error;
         }
     };
-    
+
     // معالج حذف السؤال
     const handleDeleteQuestion = async (id, event) => {
         event.stopPropagation();
@@ -438,20 +471,20 @@ export default function Organiz_admin() {
         setSwapStatus({ type: 'loading', message: '🔄 جارٍ حذف السؤال...' });
         try {
             await axios.delete(`${API_BASE_URL}/questions/${id}`);
-            
+
             // إزالة السؤال من حالة الأسئلة
             setQuestions(prevQuestions => prevQuestions.filter(q => q._id !== id));
             // إزالة من التحديد إذا كان موجودًا
             setSelectedQuestionsForSwap(prevSelected => prevSelected.filter(itemId => itemId !== id));
 
             setSwapStatus({ type: 'success', message: '🗑️ تم حذف السؤال بنجاح.' });
-            
+
         } catch (err) {
             setSwapStatus({ type: 'error', message: `❌ فشل في الحذف: ${err.response?.data?.message || err.message}` });
         }
         setTimeout(() => setSwapStatus(null), 5000);
     };
-    
+
 
     // 6. منطق الفلترة والبحث (لم يتغير)
     let currentFilteredQuestions = selectedCategory
@@ -463,7 +496,7 @@ export default function Organiz_admin() {
         : currentFilteredQuestions;
 
     const finalFilteredQuestions = currentFilteredQuestions
-        .filter(q => !hiddenQuestionIds.includes(q._id)) 
+        .filter(q => !hiddenQuestionIds.includes(q._id))
         .filter(q => {
             if (!searchTerm) return true;
             const lowerCaseSearchTerm = searchTerm.toLowerCase();
@@ -515,9 +548,9 @@ export default function Organiz_admin() {
 
             {/* منطقة الفلترة والبحث */}
             <div className="filter-and-search-container">
-                
+
                 {/* حقل البحث */}
-       
+
 
                 {/* أزرار فلترة الفئة */}
                 <div className="filter-buttons-container">
@@ -539,7 +572,7 @@ export default function Organiz_admin() {
                         </button>
                     ))}
                 </div>
-            
+
                 {/* أزرار فلترة السلسلة */}
                 {currentFilteredQuestions.length > 0 && (
                     <div className="filter-buttons-container" style={{ marginTop: '10px' }}>
@@ -580,7 +613,7 @@ export default function Organiz_admin() {
                     >
                         {swapStatus?.type === 'loading' ? 'جاري...' : '🔄 تبديل الصور الآن'}
                     </button>
-                    
+
                     {/* NEW: زر عرض الأسئلة المخفية */}
                     <button
                         onClick={() => setIsModalOpen(true)}
@@ -589,7 +622,7 @@ export default function Organiz_admin() {
                     >
                         👁️‍🗨️ عرض المخفية ({hiddenQuestionIds.length})
                     </button>
-                    
+
                     {/* MODIFIED: زر مسح التحديد فقط */}
                     <button
                         onClick={handleClearSelection}
@@ -598,16 +631,16 @@ export default function Organiz_admin() {
                         مسح التحديد
                     </button>
 
-                             <div className="search-input-container" style={{ marginBottom: '20px' }}>
-                    <input
-                        type="text"
-                        placeholder="ابحث في نص السؤال أو الإجابة..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="search-input"
-                        dir="rtl"
-                    />
-                </div>
+                    <div className="search-input-container" style={{ marginBottom: '20px' }}>
+                        <input
+                            type="text"
+                            placeholder="ابحث في نص السؤال أو الإجابة..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="search-input"
+                            dir="rtl"
+                        />
+                    </div>
                 </div>
                 {swapStatus && (
                     <p className={`status-message ${swapStatus.type}`}>{swapStatus.message}</p>
@@ -625,10 +658,10 @@ export default function Organiz_admin() {
                         <div className="questions-text-grid">
                             {finalFilteredQuestions.map((q) => {
                                 const isSelected = selectedQuestionsForSwap.includes(q._id);
-                                
+
                                 // الشرط لظهور زر الإخفاء: يظهر فقط إذا كان الكارد الأول المختار
                                 const showHideButton = (q._id === firstSelectedId);
-                                
+
                                 return (
                                     <div
                                         className={`question-text-card ${isSelected ? 'selected-for-swap' : ''}`}
@@ -674,7 +707,7 @@ export default function Organiz_admin() {
                                                     </li>
                                                 ))}
                                             </ul>
-                                            
+
                                             {/* أزرار الإجراءات في بطاقة النص */}
                                             <div className="question-actions-footer">
                                                 <button
@@ -683,7 +716,7 @@ export default function Organiz_admin() {
                                                 >
                                                     ✏️ تعديل
                                                 </button>
-                                                
+
                                                 <button
                                                     className="action-button delete-button"
                                                     onClick={(e) => handleDeleteQuestion(q._id, e)}
@@ -715,10 +748,10 @@ export default function Organiz_admin() {
                         <div className="questions-image-grid">
                             {finalFilteredQuestions.map((q) => {
                                 const isSelected = selectedQuestionsForSwap.includes(q._id);
-                                
+
                                 // الشرط لظهور زر الإخفاء
                                 const showHideButton = (q._id === firstSelectedId);
-                                
+
                                 return (
                                     <div
                                         className={`image-card ${isSelected ? 'selected-for-swap' : ''}`}
@@ -754,16 +787,16 @@ export default function Organiz_admin() {
                     </div>
                 </div>
             )}
-            
+
             {/* NEW: النافذة المنبثقة للأسئلة المخفية (Modal) */}
             {isModalOpen && (
-                <HiddenQuestionsModal 
+                <HiddenQuestionsModal
                     hiddenQuestions={hiddenQuestions}
                     onClose={() => setIsModalOpen(false)}
                     onRestoreAll={handleRestoreAllHidden}
                 />
             )}
-            
+
             {/* NEW: النافذة المنبثقة للتعديل (Update Modal) */}
             {isUpdateModalOpen && questionToUpdate && (
                 <UpdateQuestionModal

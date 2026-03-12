@@ -222,15 +222,21 @@ app.get('/api/quiz/series', async (req, res) => {
     try {
         const { category1, category2 } = req.query;
 
-        if (!category1 || !category2) {
-            return res.status(400).json({ message: 'يجب تقديم الفئة 1 والفئة 2.' });
+        if (!category1) {
+            return res.status(400).json({ message: 'يجب تقديم الفئة 1 على الأقل.' });
+        }
+
+        // بناء استعلام مرن
+        const query = { category1: category1.trim() };
+        if (category2) {
+            query.category2 = category2.trim();
+        } else {
+            // إذا لم يتم توفير category2، نبحث عن الأسئلة التي ليس لها موضوع فرعي أو موضوعها فارغ
+            query.$or = [{ category2: "" }, { category2: { $exists: false } }];
         }
 
         // البحث عن أرقام السلاسل الفريدة
-        const series = await Question.distinct('nb_serie', {
-            category1: category1.trim(),
-            category2: category2.trim()
-        });
+        const series = await Question.distinct('nb_serie', query);
 
         // ترتيب السلاسل تصاعدياً
         series.sort((a, b) => a - b);

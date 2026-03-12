@@ -5,13 +5,16 @@ import Navbar from '../comp/navbar';
 import { FaChevronRight, FaChevronLeft, FaTimesCircle, FaCheckCircle } from 'react-icons/fa';
 import { useLocation } from 'react-router-dom';
 import axios from 'axios';
+import { API_BASE_URL } from '../config';
 // تأكد من وجود ملف Serie.css لاستخدام الأنماط
 
-const API_URL = 'https://code-route-rho.vercel.app/api/quiz/questions';
+const API_URL = `${API_BASE_URL}/quiz/questions`;
 const FREE_TRIAL_LIMIT = 3;
 
 // ⭐️ دالة مساعدة لتجزئة الباراميتر المدمج
 const parseCategoryParam = (param) => {
+    if (!param) return { category1: '', category2: '' };
+
     const parts = param.split(' / ').map(p => p.trim()).filter(p => p.length > 0);
 
     let category1 = '';
@@ -24,8 +27,8 @@ const parseCategoryParam = (param) => {
         category1 = parts[0];
         category2 = parts[1];
     } else {
-        category1 = parts[0] || 'Unknown';
-        category2 = parts[1] || 'Unknown';
+        category1 = parts[0] || '';
+        category2 = '';
     }
 
     return { category1, category2 };
@@ -41,6 +44,7 @@ export default function Serie() {
     const [error, setError] = useState(null);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [showEditModal, setShowEditModal] = useState(false); // ⭐️ حالة النافذة المنبثقة
+    const [imageLoading, setImageLoading] = useState(true); // ⭐️ حالة تحميل الصورة
 
     // Scroll active question into view
     useEffect(() => {
@@ -66,12 +70,14 @@ export default function Serie() {
     const handleNext = () => {
         // يسمح بالانتقال للدروس التي تقل عن الحد المرئي
         if (currentQuestionIndex < visibleLessonCount - 1) {
+            setImageLoading(true);
             setCurrentQuestionIndex(currentQuestionIndex + 1);
         }
     };
 
     const handlePrev = () => {
         if (currentQuestionIndex > 0) {
+            setImageLoading(true);
             setCurrentQuestionIndex(currentQuestionIndex - 1);
         }
     };
@@ -79,6 +85,7 @@ export default function Serie() {
     const handleJumpToQuestion = (index) => {
         // يسمح بالانتقال فقط ضمن الدروس المرئية (المسموح بها)
         if (index >= 0 && index < visibleLessonCount) {
+            setImageLoading(true);
             setCurrentQuestionIndex(index);
         }
     };
@@ -105,9 +112,9 @@ export default function Serie() {
 
             const { category1, category2 } = parseCategoryParam(rawCategoryParam || '');
 
-            if (!category1 || category1 === 'Unknown' || !category2 || category2 === 'Unknown') {
+            if (!category1) {
                 setLoading(false);
-                return setError('الرابط غير مكتمل. لا يمكن تحديد فئة المركبة أو الموضوع.');
+                return setError('الرابط غير مكتمل. لا يمكن تحديد فئة المركبة.');
             }
 
             try {
@@ -123,6 +130,7 @@ export default function Serie() {
                     // ⭐️ جلب جميع البيانات بدون قطعها هنا، ليتسنى عرض أرقام الدروس المحجوبة
                     setQuizData(response.data);
                     setCurrentQuestionIndex(0);
+                    setImageLoading(true);
                 } else {
                     setQuizData([]);
                     setError(`لم يتم العثور على أسئلة للفئة: "${category1} / ${category2}" والسلسلة: ${nbSerieParam}.`);
@@ -156,7 +164,7 @@ export default function Serie() {
 
         setLoading(true);
         try {
-            await axios.put(`https://code-route-rho.vercel.app//api/questions/${currentQuestion._id}`, {
+            await axios.put(`${API_BASE_URL}/questions/${currentQuestion._id}`, {
                 options: updatedOptions
             });
 
@@ -231,10 +239,10 @@ export default function Serie() {
                 )}
 
                 <div className="quiz-header">
-                    <h2>درس رخصة القيادة: {mainCategory} - {currentTopic}</h2>
+                    <h2>درس : {mainCategory} {currentTopic && `- ${currentTopic}`}</h2>
                     {/* نستخدم totalQuestions لعدد الدروس الكلي ونعرض الحد التجريبي إذا لم يكن مشتركاً */}
                     {/* <p>الدرس {currentQuestionIndex + 1} من {totalQuestions}</p> */}
-                    <h3>Serie {(new URLSearchParams(location.search).get('nb_serie') || '1')}</h3>
+                    {/* <h3>Serie {(new URLSearchParams(location.search).get('nb_serie') || '1')}</h3> */}
 
                 </div>
 
@@ -266,7 +274,28 @@ export default function Serie() {
                         </div>
                     </div>
 
-
+                    {/* زر التعديل للمسؤول */}
+                    {!isCurrentLessonLocked && (
+                        <button
+                            className="edit-answer-btn"
+                            onClick={handleEditCorrectAnswer}
+                            style={{
+                                marginTop: '10px',
+                                padding: '5px 10px',
+                                fontSize: '12px',
+                                backgroundColor: '#f39c12',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                position: "absolute",
+                                top: "80px",
+                                right: "10px"
+                            }}
+                        >
+                            تعديل الإجابة
+                        </button>
+                    )}
                     {/* العمود الرئيسي للسؤال والصورة */}
                     <div className="question-main">
                         {isCurrentLessonLocked ? (
@@ -277,11 +306,23 @@ export default function Serie() {
                         ) : (
                             <>
                                 <div className="question-image-box">
+                                    {imageLoading && (
+                                        <div className="image-loader-placeholder">
+                                            <div className="spinner"></div>
+                                            <p>جاري تحميل الصورة...</p>
+                                        </div>
+                                    )}
                                     <img
                                         src={currentQuestion.image}
                                         alt="صورة الدرس"
                                         className="question-image"
-                                        onError={(e) => { e.target.onerror = null; e.target.src = "https://placehold.co/400x250?text=صورة+غير+متوفرة"; }}
+                                        style={imageLoading ? { display: 'none' } : {}}
+                                        onLoad={() => setImageLoading(false)}
+                                        onError={(e) => {
+                                            e.target.onerror = null;
+                                            e.target.src = "https://placehold.co/400x250?text=صورة+غير+متوفرة";
+                                            setImageLoading(false);
+                                        }}
                                     />
                                 </div>
 
@@ -312,33 +353,15 @@ export default function Serie() {
 
                     {/* عمود التحكم (أقصى اليسار) */}
                     <div className="control-panel">
-                        <div className="your-response-box">
+                        {/* <div className="your-response-box">
                             <p>الإجابة الصحيحة</p>
                             <span className="response-placeholder correct-letter-display">
-                                {/* إخفاء الإجابة في الدروس المحجوبة */}
+
                                 {isCurrentLessonLocked ? '🔒' : getCorrectAnswerLetter()}
                             </span>
 
-                            {/* زر التعديل للمسؤول */}
-                            {!isCurrentLessonLocked && (
-                                <button
-                                    className="edit-answer-btn"
-                                    onClick={handleEditCorrectAnswer}
-                                    style={{
-                                        marginTop: '10px',
-                                        padding: '5px 10px',
-                                        fontSize: '12px',
-                                        backgroundColor: '#f39c12',
-                                        color: 'white',
-                                        border: 'none',
-                                        borderRadius: '4px',
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    تعديل الإجابة
-                                </button>
-                            )}
-                        </div>
+
+                        </div> */}
 
                         {/* <div className="question-info">
                             <p>{mainCategory} و {currentTopic}</p>
@@ -355,7 +378,8 @@ export default function Serie() {
                 {/* أزرار التنقل بين الأسئلة في الأسفل */}
                 <div className="quiz-navigation">
                     <button onClick={handlePrev} disabled={currentQuestionIndex === 0} className="nav-button">
-                        <FaChevronRight /> الدرس السابق
+                        <FaChevronRight /><span className='disable_phone'> الدرس السابق</span>
+
                     </button>
                     <button
                         onClick={handleNext}
@@ -363,7 +387,7 @@ export default function Serie() {
                         disabled={currentQuestionIndex >= visibleLessonCount - 1}
                         className="nav-button next-button"
                     >
-                        التالي <FaChevronLeft />
+                        <span className='disable_phone'>التالي</span> <FaChevronLeft />
                     </button>
                 </div>
 

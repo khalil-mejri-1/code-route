@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import Navbar from '../comp/navbar';
 import axios from 'axios';
+import { API_BASE_URL } from '../config';
 
 // 2. مكون البطاقة الفردية (CardComponent)
 function CardComponent({ id, category, image, isLoggedIn, isSubscribed, mainCategory }) {
@@ -23,7 +24,20 @@ function CardComponent({ id, category, image, isLoggedIn, isSubscribed, mainCate
         overlayMessage = "";
     }
 
-    const cardClassName = `card-link ${isCardDisabled ? 'card-disabled' : ''}`;
+    const [isChecked, setIsChecked] = useState(() => {
+        const saved = localStorage.getItem(`checked_topic_${mainCategory}_${category}`);
+        return saved === 'true';
+    });
+
+    const toggleCheck = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const newValue = !isChecked;
+        setIsChecked(newValue);
+        localStorage.setItem(`checked_topic_${mainCategory}_${category}`, newValue);
+    };
+
+    const cardClassName = `card-link ${isCardDisabled ? 'card-disabled' : ''} ${isChecked ? 'card-checked' : ''}`;
     const Wrapper = isCardDisabled ? 'div' : Link;
 
     // ⭐️ بناء رابط URL المدمج (ليرسله الخادم كـ category1 و category2)
@@ -36,6 +50,13 @@ function CardComponent({ id, category, image, isLoggedIn, isSubscribed, mainCate
 
     return (
         <Wrapper {...linkProps} className={cardClassName}>
+            <div
+                className={`checkmark-btn ${isChecked ? 'checked' : ''}`}
+                onClick={toggleCheck}
+                title="حدد كمكتمل"
+            >
+                <span className="checkmark-icon">{isChecked ? '✓' : '✓'}</span>
+            </div>
             <div className="license-card">
                 <div className="card-image-container">
                     <img
@@ -74,7 +95,7 @@ export default function Cours_question() {
     useEffect(() => {
         const fetchTopics = async () => {
             try {
-                const response = await axios.get(`https://code-route-rho.vercel.app//api/topics?category=${encodeURIComponent(mainCategory)}`);
+                const response = await axios.get(`${API_BASE_URL}/topics?category=${encodeURIComponent(mainCategory)}`);
                 setTopics(response.data);
             } catch (error) {
                 console.error('Error fetching topics:', error);

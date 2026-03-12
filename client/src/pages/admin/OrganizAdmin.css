@@ -49,7 +49,7 @@
 .questions-text-grid {
     display: grid;
     /* عرض متجاوب بحد أدنى 300 بكسل لكل عمود */
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); 
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 20px;
 }
 
@@ -71,7 +71,8 @@
     transition: all 0.2s ease-in-out;
     cursor: pointer;
     border: 3px solid transparent;
-    position: relative; /* مهم لزر الإخفاء */
+    position: relative;
+    /* مهم لزر الإخفاء */
 }
 
 .question-text-card:hover {
@@ -165,27 +166,27 @@
 /* حاوية أزرار التبديل - مثبته في الأسفل */
 .swap-actions-container {
     /* خصائص التثبيت في الأسفل */
-    position: fixed; 
-    bottom: 0; 
+    position: fixed;
+    bottom: 0;
     left: 0;
-    right: 0; 
-    z-index: 1000; 
-    
+    right: 0;
+    z-index: 1000;
+
     /* الخصائص الحالية */
     display: flex;
-    justify-content: space-around; 
+    justify-content: space-around;
     align-items: center;
-    gap: 25px; 
+    gap: 25px;
     padding: 15px 20px;
     background-color: #f8f9fa;
-    border-top: 2px solid #007bff; 
-    box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.1); 
-    margin-bottom: 0; 
-    direction: rtl; 
+    border-top: 2px solid #007bff;
+    box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.1);
+    margin-bottom: 0;
+    direction: rtl;
 }
 
 /* تعديل بسيط لعناصر الحالة لتظهر بشكل جيد في الشريط السفلي */
-.swap-actions-container > div {
+.swap-actions-container>div {
     display: flex;
     align-items: center;
     gap: 15px;
@@ -255,10 +256,10 @@
 
 .filter-buttons-container {
     display: flex;
-    flex-wrap: wrap; 
+    flex-wrap: wrap;
     gap: 10px;
     margin-bottom: 15px;
-    direction: rtl; 
+    direction: rtl;
 }
 
 .filter-button {
@@ -270,11 +271,11 @@
     font-size: 0.9em;
     cursor: pointer;
     transition: all 0.3s ease;
-    white-space: nowrap; 
+    white-space: nowrap;
 }
 
 .filter-button.active {
-    background-color: #007bff; 
+    background-color: #007bff;
     color: white;
     border-color: #007bff;
     font-weight: bold;
@@ -284,7 +285,7 @@
 .search-input-container {
     padding: 0;
     display: flex;
-    justify-content: flex-end; 
+    justify-content: flex-end;
     margin-top: 15px;
 }
 
@@ -308,8 +309,8 @@
 }
 
 .option-item {
-    display: flex; 
-    justify-content: space-between; 
+    display: flex;
+    justify-content: space-between;
     align-items: center;
     margin-bottom: 5px;
     padding-right: 5px;
@@ -318,7 +319,7 @@
 }
 
 .correct-status-icon {
-    min-width: 80px; 
+    min-width: 80px;
     display: inline-block;
     color: #28a745;
 }
@@ -328,12 +329,12 @@
 }
 
 .option-text {
-    flex-grow: 1; 
+    flex-grow: 1;
     padding-left: 5px;
 }
 
 .set-correct-button {
-    background-color: #ffc107; 
+    background-color: #ffc107;
     color: #333;
     border: none;
     padding: 3px 8px;
@@ -343,7 +344,7 @@
     border-radius: 4px;
     cursor: pointer;
     transition: background-color 0.2s;
-    float: none; 
+    float: none;
 }
 
 .set-correct-button:hover {
@@ -398,7 +399,8 @@
 .hide-temp-button {
     background-color: #6c757d;
     color: white;
-    flex-grow: 1.5; /* ليكون أعرض قليلاً */
+    flex-grow: 1.5;
+    /* ليكون أعرض قليلاً */
 }
 
 .hide-temp-button:hover {
@@ -423,7 +425,7 @@
     position: absolute;
     top: 10px;
     right: 10px;
-    background-color: #28a745; 
+    background-color: #28a745;
     color: white;
     padding: 3px 8px;
     border-radius: 5px;
@@ -437,7 +439,8 @@
 /* ----------------------------------- */
 
 .show-hidden-button {
-    background-color: #17a2b8; /* لون أزرق سماوي جذاب */
+    background-color: #17a2b8;
+    /* لون أزرق سماوي جذاب */
     color: white;
     border: none;
     padding: 10px 15px;
@@ -479,7 +482,7 @@
     border-radius: 10px;
     width: 90%;
     max-width: 700px;
-    max-height: 80vh; 
+    max-height: 80vh;
     display: flex;
     flex-direction: column;
     box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
@@ -520,12 +523,13 @@
 
 .modal-body {
     padding: 20px;
-    overflow-y: auto; /* لجعل محتوى الأسئلة قابل للتمرير */
+    overflow-y: auto;
+    /* لجعل محتوى الأسئلة قابل للتمرير */
     flex-grow: 1;
 }
 
 .restore-all-button {
-    background-color: #28a745; 
+    background-color: #28a745;
     color: white;
     border: none;
     padding: 10px 20px;
@@ -557,21 +561,23 @@
     padding: 15px;
     border: 1px solid #ddd;
     border-radius: 8px;
-    background-color: #fff9e6; 
+    background-color: #fff9e6;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
 }
 
 /* حاوية المحتوى داخل العنصر المخفي */
 .hidden-question-content {
     display: flex;
-    align-items: flex-start; /* الصورة والنص يبدآن من الأعلى */
+    align-items: flex-start;
+    /* الصورة والنص يبدآن من الأعلى */
     gap: 15px;
     text-align: right;
 }
 
 /* حاوية الصورة */
 .hidden-question-image-container {
-    flex-shrink: 0; /* لمنع الصورة من الانكماش */
+    flex-shrink: 0;
+    /* لمنع الصورة من الانكماش */
     width: 120px;
     height: 80px;
     overflow: hidden;
@@ -611,7 +617,8 @@
 /* ----------------------------------- */
 
 .update-modal-content {
-    max-width: 900px; /* توسيع النافذة لتناسب نموذج التعديل */
+    max-width: 900px;
+    /* توسيع النافذة لتناسب نموذج التعديل */
 }
 
 .update-form label {
@@ -706,6 +713,35 @@
 
 .correct-toggle-button:hover:not(.is-correct) {
     background-color: #6c757d;
+}
+
+.remove-option-button {
+    flex-shrink: 0;
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    font-size: 1em;
+}
+
+.remove-option-button:hover {
+    background-color: #c82333;
+}
+
+.add-option-button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.add-option-button:hover {
+    background-color: #0056b3;
 }
 
 .update-submit-button {
