@@ -5,7 +5,7 @@ import Navbar from '../comp/navbar';
 import { FaChevronRight, FaChevronLeft, FaTimesCircle, FaCheckCircle, FaArrowRight } from 'react-icons/fa';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { API_BASE_URL } from '../config';
+import { API_BASE_URL, IMGBB_API_KEY, IMGBB_UPLOAD_URL } from '../config';
 // import '../styles/ExamenTest.css'; // تأكد من استيراد الأنماط
 
 const API_URL = `${API_BASE_URL}/quiz/questions`;
@@ -51,6 +51,14 @@ export default function Examen_test() {
     const [showAnswer, setShowAnswer] = useState(false);
     // History: true (صحيح), false (خاطئ), null (لم تتم الإجابة/الكشف بعد)
     const [userAnswersHistory, setUserAnswersHistory] = useState([]);
+
+    // --- Edit Mode States ---
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [editQuestionText, setEditQuestionText] = useState('');
+    const [editOptions, setEditOptions] = useState([]);
+    const [editImageFile, setEditImageFile] = useState(null);
+    const [editPreviewUrl, setEditPreviewUrl] = useState(null);
+    const [isSaving, setIsSaving] = useState(false);
 
     // Scroll active question into view
     useEffect(() => {
@@ -182,6 +190,101 @@ export default function Examen_test() {
     const handleJumpToQuestion = (index) => navigateToQuestion(index);
 
 
+    // ⭐️ دوال التعديل
+    const handleOpenEditModal = () => {
+        if (!currentQuestion) return;
+        setEditQuestionText(currentQuestion.question || '');
+        setEditOptions(currentQuestion.options.map(opt => ({ ...opt }))); // Deep copy
+        setEditImageFile(null);
+        setEditPreviewUrl(currentQuestion.image || null);
+        setShowEditModal(true);
+    };
+
+    const handleOptionChange = (index, value) => {
+        const newOptions = [...editOptions];
+        newOptions[index].text = value;
+        setEditOptions(newOptions);
+    };
+
+    const handleSetCorrectAnswer = (index) => {
+        const newOptions = editOptions.map((opt, i) => ({
+            ...opt,
+            isCorrect: i === index
+        }));
+        setEditOptions(newOptions);
+    };
+
+    const handleAddOption = () => {
+        setEditOptions([...editOptions, { text: '', isCorrect: false }]);
+    };
+
+    const handleRemoveOption = (index) => {
+        const newOptions = editOptions.filter((_, i) => i !== index);
+        if (newOptions.length > 0 && !newOptions.some(o => o.isCorrect)) {
+            newOptions[0].isCorrect = true;
+        }
+        setEditOptions(newOptions);
+    };
+
+    const uploadToImgBB = async (file) => {
+        const base64 = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result.split(',')[1]);
+            reader.onerror = (error) => reject(error);
+            reader.readAsDataURL(file);
+        });
+
+        const params = new URLSearchParams();
+        params.append('image', base64);
+
+        const response = await fetch(`${IMGBB_UPLOAD_URL}?key=${IMGBB_API_KEY}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params.toString()
+        });
+
+        const data = await response.json();
+        if (data.success) return data.data.url;
+        throw new Error('فشل رفع الصورة');
+    };
+
+    const handleSaveEdit = async () => {
+        if (!editQuestionText.trim() || editOptions.length === 0) {
+            alert('يرجى التأكد من كتابة السؤال ووجود إجابة واحدة على الأقل.');
+            return;
+        }
+
+        setIsSaving(true);
+        try {
+            let imageUrl = currentQuestion.image;
+            if (editImageFile) {
+                imageUrl = await uploadToImgBB(editImageFile);
+            }
+
+            await axios.put(`${API_BASE_URL}/questions/${currentQuestion._id}`, {
+                question: editQuestionText,
+                options: editOptions,
+                image: imageUrl
+            });
+
+            // تحديث البيانات محلياً
+            const updatedData = [...quizData];
+            updatedData[currentQuestionIndex] = {
+                ...currentQuestion,
+                question: editQuestionText,
+                options: editOptions,
+                image: imageUrl
+            };
+            setQuizData(updatedData);
+            setShowEditModal(false);
+        } catch (err) {
+            console.error(err);
+            alert('❌ فشل في تحديث السؤال.');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     // ⭐️ تعديل getOptionClass (الخيار المختار/الصحيح)
     const getOptionClass = (optionIndex, isCorrect) => {
         let className = 'quiz-option';
@@ -243,6 +346,96 @@ export default function Examen_test() {
         <>
             <Navbar />
             <div className="quiz-container">
+                {/* ⭐️ نافذة تعديل السؤال */}
+                {showEditModal && (
+                    <div className="modern-modal-overlay">
+                        <div className="modern-modal-content edit-lesson-modal" style={{ maxWidth: '800px', width: '90%', maxHeight: '90vh', overflowY: 'auto' }}>
+                            <div className="modal-header-admin">
+                                <h3>🛠️ تعديل محتوى السؤال</h3>
+                                <button className="close-btn-top" onClick={() => setShowEditModal(false)}><FaTimesCircle /></button>
+                            </div>
+
+                            <div className="modal-body-scrollable">
+                                <div className="admin-edit-section">
+                                    <label>تعديل السؤال:</label>
+                                    <textarea
+                                        className="admin-textarea"
+                                        value={editQuestionText}
+                                        onChange={(e) => setEditQuestionText(e.target.value)}
+                                        rows={3}
+                                    />
+                                </div>
+
+                                <div className="admin-edit-section">
+                                    <label>تعديل الإجابات (اختر الإجابة الصحيحة بالدائرة):</label>
+                                    {editOptions.map((opt, index) => (
+                                        <div key={index} style={{ display: 'flex', alignItems: 'center', marginBottom: '10px', gap: '10px' }}>
+                                            <input
+                                                type="radio"
+                                                name="correctAnswer"
+                                                checked={opt.isCorrect}
+                                                onChange={() => handleSetCorrectAnswer(index)}
+                                                style={{ width: '20px', height: '20px', cursor: 'pointer' }}
+                                                title="إجابة صحيحة"
+                                            />
+                                            <input
+                                                type="text"
+                                                value={opt.text}
+                                                onChange={(e) => handleOptionChange(index, e.target.value)}
+                                                className="admin-textarea"
+                                                style={{ flex: 1, padding: '8px', borderRadius: '4px', border: '1px solid #ccc', margin: 0 }}
+                                            />
+                                            <button
+                                                onClick={() => handleRemoveOption(index)}
+                                                style={{ padding: '8px 12px', backgroundColor: '#e74c3c', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                                            >
+                                                حذف
+                                            </button>
+                                        </div>
+                                    ))}
+                                    <button
+                                        onClick={handleAddOption}
+                                        style={{ marginTop: '10px', padding: '8px 15px', backgroundColor: '#2ecc71', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                                    >
+                                        + إضافة إجابة
+                                    </button>
+                                </div>
+
+                                <div className="admin-edit-section">
+                                    <label>تعديل الصورة:</label>
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={(e) => {
+                                            if (e.target.files?.[0]) {
+                                                setEditImageFile(e.target.files[0]);
+                                                setEditPreviewUrl(URL.createObjectURL(e.target.files[0]));
+                                            }
+                                        }}
+                                        className="admin-file-input"
+                                    />
+                                    {editPreviewUrl && (
+                                        <div className="admin-preview-box">
+                                            <img src={editPreviewUrl} alt="Preview" style={{ maxWidth: '100%', maxHeight: '400px', objectFit: 'contain' }} />
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="modal-footer-admin">
+                                <button className="cancel-btn" onClick={() => setShowEditModal(false)}>إلغاء</button>
+                                <button
+                                    className="save-btn"
+                                    onClick={handleSaveEdit}
+                                    disabled={isSaving}
+                                >
+                                    {isSaving ? 'جاري الحفظ...' : 'حفظ التعديلات ✅'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <div className="quiz-header">
                     <h2>اختبار رخصة القيادة: {mainCategory} {currentTopic && `- ${currentTopic}`}</h2>
 
@@ -337,6 +530,26 @@ export default function Examen_test() {
                             </span>
                         </div>
 
+                        {/* ⭐️ زر التعديل */}
+                        <button
+                            className="edit-answer-btn"
+                            onClick={handleOpenEditModal}
+                            style={{
+                                marginTop: '10px',
+                                padding: '8px 15px',
+                                fontSize: '14px',
+                                backgroundColor: '#f39c12',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                width: '100%',
+                                marginBottom: '10px'
+                            }}
+                        >
+                            تعديل السؤال والإجابات
+                        </button>
+
                         {/* <div className="question-info">
                             <p>{mainCategory} و {currentTopic}</p>
 
@@ -364,7 +577,7 @@ export default function Examen_test() {
                 {/* أزرار التنقل بين الأسئلة في الأسفل */}
                 <div className="quiz-navigation">
                     <button onClick={handlePrev} disabled={currentQuestionIndex === 0} className="nav-button">
-                        <FaChevronRight /><span> السdsdابق</span>
+                        <FaChevronRight /><span> السابق</span>
                     </button>
 
                     <button

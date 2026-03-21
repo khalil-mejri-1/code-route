@@ -5,7 +5,7 @@ import Navbar from '../comp/navbar';
 import { FaChevronRight, FaChevronLeft, FaTimesCircle, FaCheckCircle } from 'react-icons/fa';
 import { useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { API_BASE_URL } from '../config';
+import { API_BASE_URL, IMGBB_API_KEY, IMGBB_UPLOAD_URL } from '../config';
 // تأكد من وجود ملف Serie.css لاستخدام الأنماط
 
 const API_URL = `${API_BASE_URL}/quiz/questions`;
@@ -43,8 +43,17 @@ export default function Serie() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-    const [showEditModal, setShowEditModal] = useState(false); // ⭐️ حالة النافذة المنبثقة
-    const [imageLoading, setImageLoading] = useState(true); // ⭐️ حالة تحميل الصورة
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [imageLoading, setImageLoading] = useState(true);
+
+    // --- Edit Mode States (Admin) ---
+    const [editInputText, setEditInputText] = useState('');
+    const [editOutputText, setEditOutputText] = useState('');
+    const [editImageFile, setEditImageFile] = useState(null);
+    const [editPreviewUrl, setEditPreviewUrl] = useState(null);
+    const [isSaving, setIsSaving] = useState(false);
+    const [statusMessage, setStatusMessage] = useState('');
+    const fileInputRef = useRef(null);
 
     // Scroll active question into view
     useEffect(() => {
@@ -150,37 +159,135 @@ export default function Serie() {
     // --- استخراج وتجزئة بيانات الفئة من الـ URL (للعرض) ---
     const { category1: mainCategory, category2: currentTopic } = parseCategoryParam(new URLSearchParams(location.search).get('category') || '');
 
-    // ⭐️ دالة لفتح نافذة التعديل
+    // ⭐️ دالة لفتح نافذة التعديل (المحسنة)
     const handleEditCorrectAnswer = () => {
+        // تجهيز النص المستخرج من البيانات الحالية
+        const correctOpt = currentQuestion.options.find(o => o.isCorrect);
+        const incorrectOpts = currentQuestion.options.filter(o => !o.isCorrect);
+
+        const initialOutput = [
+            currentQuestion.question,
+            correctOpt?.text || '',
+            ...incorrectOpts.map(o => o.text)
+        ].join('\n');
+
+        setEditOutputText(initialOutput);
+        setEditInputText('');
+        setEditImageFile(null);
+        setEditPreviewUrl(currentQuestion.image);
+        setStatusMessage('');
         setShowEditModal(true);
     };
 
-    // ⭐️ دالة لتحديث الإجابة في قاعدة البيانات
-    const updateCorrectAnswer = async (newIndex) => {
-        const updatedOptions = currentQuestion.options.map((opt, idx) => ({
-            ...opt,
-            isCorrect: idx === newIndex
-        }));
+    // ⭐️ منطق استخراج النص (مثل Admin 2)
+    const processEditResult = () => {
+        const lines = editInputText.split('\n');
 
-        setLoading(true);
+        const cleaned = lines.filter(line => {
+            const trimmed = line.trim();
+            if (trimmed === '' || trimmed.length === 1) return false;
+            if (/dell/i.test(trimmed)) return false;
+            if (trimmed.includes('codedelaroute') || trimmed.includes('Code de la route')) return false;
+            if (trimmed.includes('الاجابات الخاطلة') || trimmed.includes('اجابتك هى') || trimmed.includes('Votre réponse')) return false;
+            if (/Serie\s+\d+/i.test(trimmed)) return false;
+            if (/^\d{1,2}:\d{2}$/.test(trimmed)) return false;
+            return true;
+        });
+
+        const timeRegex = /\b\d{1,2}:\d{2}\b/;
+        let result = [];
+        let method = 'تنظيف بسيط';
+
+        let colonIndex = -1;
+        for (let i = cleaned.length - 1; i >= 0; i--) {
+            if (cleaned[i].includes(':') && !(timeRegex.test(cleaned[i]) && cleaned[i].length < 10)) {
+                if (cleaned.length - 1 - i >= 1) {
+                    colonIndex = i;
+                    break;
+                }
+            }
+        }
+
+        if (colonIndex !== -1) {
+            result = cleaned.slice(colonIndex);
+            method = 'تم العثور على (:)';
+        } else {
+            result = cleaned;
+        }
+
+        // حذف البادئات (أ، ب، ج...)
+        result = result.map(line => line.replace(/^([a-zA-Z\u0600-\u065F\u066A-\u06FF]\u0640?\s+)+/, ''));
+
+        setEditOutputText(result.join('\n'));
+        setStatusMessage(method);
+    };
+
+    // ⭐️ رفع الصورة (مثل Admin 2)
+    const uploadToImgBB = async (file) => {
+        const base64 = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result.split(',')[1]);
+            reader.onerror = (error) => reject(error);
+            reader.readAsDataURL(file);
+        });
+
+        const params = new URLSearchParams();
+        params.append('image', base64);
+
+        const response = await fetch(`${IMGBB_UPLOAD_URL}?key=${IMGBB_API_KEY}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params.toString()
+        });
+
+        const data = await response.json();
+        if (data.success) return data.data.url;
+        throw new Error('فشل رفع الصورة');
+    };
+
+    // ⭐️ حفظ التعديلات الكلية
+    const handleSaveEdit = async () => {
+        const lines = editOutputText.split('\n').map(l => l.trim()).filter(l => l);
+        if (lines.length < 2) {
+            alert('يجب أن يحتوي النص المستخرج على سؤال وإجابة واحدة على الأقل.');
+            return;
+        }
+
+        setIsSaving(true);
         try {
+            let imageUrl = currentQuestion.image;
+            if (editImageFile) {
+                imageUrl = await uploadToImgBB(editImageFile);
+            }
+
+            const questionText = lines[0];
+            const options = lines.slice(1).map((text, idx) => ({
+                text,
+                isCorrect: idx === 0
+            }));
+
             await axios.put(`${API_BASE_URL}/questions/${currentQuestion._id}`, {
-                options: updatedOptions
+                question: questionText,
+                options: options,
+                image: imageUrl
             });
 
-            // تحديث الواجهة فوراً
-            const updatedQuizData = [...quizData];
-            updatedQuizData[currentQuestionIndex] = {
+            // تحديث البيانات محلياً
+            const updatedData = [...quizData];
+            updatedData[currentQuestionIndex] = {
                 ...currentQuestion,
-                options: updatedOptions
+                question: questionText,
+                options: options,
+                image: imageUrl
             };
-            setQuizData(updatedQuizData);
+            setQuizData(updatedData);
             setShowEditModal(false);
+            alert('✅ تم تحديث الدرس بنجاح!');
         } catch (err) {
-            console.error("Update Error:", err);
-            alert("❌ فشل في تحديث الإجابة.");
+            console.error(err);
+            alert('❌ فشل في تحديث الدرس.');
         } finally {
-            setLoading(false);
+            setIsSaving(false);
         }
     };
 
@@ -220,20 +327,68 @@ export default function Serie() {
                 {/* ⭐️ نافذة تعديل الإجابة بتصميم جميل */}
                 {showEditModal && (
                     <div className="modern-modal-overlay">
-                        <div className="modern-modal-content">
-                            <h3>اختر الإجابة الصحيحة الجديدة</h3>
-                            <div className="answer-selection-grid">
-                                {['أ', 'ب', 'ج'].map((letter, idx) => (
-                                    <button
-                                        key={idx}
-                                        className={`selection-circle ${currentQuestion.options[idx]?.isCorrect ? 'current-active' : ''}`}
-                                        onClick={() => updateCorrectAnswer(idx)}
-                                    >
-                                        {letter}
-                                    </button>
-                                ))}
+                        <div className="modern-modal-content edit-lesson-modal" style={{ maxWidth: '800px', width: '90%' }}>
+                            <div className="modal-header-admin">
+                                <h3>🛠️ تعديل محتوى الدرس</h3>
+                                <button className="close-btn-top" onClick={() => setShowEditModal(false)}><FaTimesCircle /></button>
                             </div>
-                            <button className="close-modal-btn" onClick={() => setShowEditModal(false)}>إلغاء</button>
+
+                            <div className="modal-body-scrollable">
+                                <div className="admin-edit-section">
+                                    <label>1. استخراج النص (Extract)</label>
+                                    <textarea
+                                        className="admin-textarea"
+                                        placeholder="ضع النص الخام هنا لإعادة استخراجه..."
+                                        value={editInputText}
+                                        onChange={(e) => setEditInputText(e.target.value)}
+                                        rows={4}
+                                    />
+                                    <button className="admin-process-btn" onClick={processEditResult}>استخراج / Clean ✨</button>
+                                    {statusMessage && <small className="status-msg">{statusMessage}</small>}
+                                </div>
+
+                                <div className="admin-edit-section">
+                                    <label>2. السؤال والإجابات (الصحيحة أولاً)</label>
+                                    <textarea
+                                        className="admin-textarea output-textarea"
+                                        placeholder="السطر 1: السؤال\nالسطر 2: الإجابة الصحيحة\nالباقي: إجابات خاطئة"
+                                        value={editOutputText}
+                                        onChange={(e) => setEditOutputText(e.target.value)}
+                                        rows={6}
+                                    />
+                                </div>
+
+                                <div className="admin-edit-section">
+                                    <label>3. تعديل الصورة</label>
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={(e) => {
+                                            if (e.target.files?.[0]) {
+                                                setEditImageFile(e.target.files[0]);
+                                                setEditPreviewUrl(URL.createObjectURL(e.target.files[0]));
+                                            }
+                                        }}
+                                        className="admin-file-input"
+                                    />
+                                    {editPreviewUrl && (
+                                        <div className="admin-preview-box">
+                                            <img src={editPreviewUrl} alt="Preview" />
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="modal-footer-admin">
+                                <button className="cancel-btn" onClick={() => setShowEditModal(false)}>إلغاء</button>
+                                <button
+                                    className="save-btn"
+                                    onClick={handleSaveEdit}
+                                    disabled={isSaving}
+                                >
+                                    {isSaving ? 'جاري الحفظ...' : 'حفظ التعديلات ✅'}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -275,27 +430,25 @@ export default function Serie() {
                     </div>
 
                     {/* زر التعديل للمسؤول */}
-                    {!isCurrentLessonLocked && (
-                        <button
-                            className="edit-answer-btn"
-                            onClick={handleEditCorrectAnswer}
-                            style={{
-                                marginTop: '10px',
-                                padding: '5px 10px',
-                                fontSize: '12px',
-                                backgroundColor: '#f39c12',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                position: "absolute",
-                                top: "80px",
-                                right: "10px"
-                            }}
-                        >
-                            تعديل الإجابة
-                        </button>
-                    )}
+                    <button
+                        className="edit-answer-btn"
+                        onClick={handleEditCorrectAnswer}
+                        style={{
+                            marginTop: '10px',
+                            padding: '5px 10px',
+                            fontSize: '12px',
+                            backgroundColor: '#f39c12',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            position: "absolute",
+                            top: "80px",
+                            right: "10px"
+                        }}
+                    >
+                        تعديل الدرس
+                    </button>
                     {/* العمود الرئيسي للسؤال والصورة */}
                     <div className="question-main">
                         {isCurrentLessonLocked ? (

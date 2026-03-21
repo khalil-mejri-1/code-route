@@ -283,6 +283,7 @@ export default function Organiz_admin() {
     // حالات الفلترة والبحث
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [selectedSerie, setSelectedSerie] = useState(null);
+    const [selectedAnswerCount, setSelectedAnswerCount] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
 
     // حالة تبديل الصور
@@ -379,6 +380,49 @@ export default function Organiz_admin() {
             setSwapStatus({ type: 'error', message: `❌ فشل: ${err.response?.data?.message || err.message}` });
         }
         setTimeout(() => setSwapStatus(null), 5000);
+    };
+
+    // ⭐️ وظيفة حذف إجابة محددة من الكارد
+    const handleDeleteOptionDirectly = async (questionId, optionIndex, event) => {
+        event.stopPropagation();
+        
+        const question = questions.find(q => q._id === questionId);
+        if (!question) return;
+
+        if (question.options.length <= 1) {
+            alert("⚠️ لا يمكن حذف آخر إجابة متبقية!");
+            return;
+        }
+
+        if (!window.confirm("🗑️ هل أنت متأكد من حذف هذه الإجابة؟")) {
+            return;
+        }
+
+        const updatedOptions = question.options.filter((_, idx) => idx !== optionIndex);
+        
+        // إذا كانت الإجابة المحذوفة هي الصحيحة، نقوم بتعيين الأولى كصحيحة تلقائياً مع تنبيه
+        if (question.options[optionIndex].isCorrect) {
+            alert("⚠️ تنبيه: قمت بحذف الإجابة الصحيحة. تم تعيين الإجابة الأولى كصحيحة مؤقتاً.");
+            if (updatedOptions.length > 0) updatedOptions[0].isCorrect = true;
+        }
+
+        setSwapStatus({ type: 'loading', message: '🔄 جارٍ تحديث الخيارات...' });
+
+        try {
+            await axios.put(`${API_BASE_URL}/questions/${questionId}`, {
+                options: updatedOptions
+            });
+
+            setQuestions(prev => prev.map(q => 
+                q._id === questionId ? { ...q, options: updatedOptions } : q
+            ));
+            
+            setSwapStatus({ type: 'success', message: '✅ تم حذف الإجابة بنجاح!' });
+        } catch (err) {
+            console.error(err);
+            setSwapStatus({ type: 'error', message: '❌ فشل حذف الإجابة.' });
+        }
+        setTimeout(() => setSwapStatus(null), 4000);
     };
 
     // 4. وظيفة الإخفاء المؤقت (لم تتغير)
@@ -495,6 +539,10 @@ export default function Organiz_admin() {
         ? currentFilteredQuestions.filter(q => q.nb_serie === selectedSerie)
         : currentFilteredQuestions;
 
+    currentFilteredQuestions = selectedAnswerCount
+        ? currentFilteredQuestions.filter(q => q.options.length === selectedAnswerCount)
+        : currentFilteredQuestions;
+
     const finalFilteredQuestions = currentFilteredQuestions
         .filter(q => !hiddenQuestionIds.includes(q._id))
         .filter(q => {
@@ -594,6 +642,27 @@ export default function Organiz_admin() {
                         ))}
                     </div>
                 )}
+
+                {/* أزرار فلترة عدد الإجابات */}
+                <div className="filter-buttons-container" style={{ marginTop: '10px' }}>
+                    <h3 style={{ margin: '0 10px 0 0', color: '#333', fontSize: '1em' }}>عدد الإجابات:</h3>
+                    <button
+                        className={`filter-button ${selectedAnswerCount === null ? 'active' : ''}`}
+                        onClick={() => setSelectedAnswerCount(null)}
+                    >
+                        الكل
+                    </button>
+                    {[2, 3, 4].map((count) => (
+                        <button
+                            key={count}
+                            className={`filter-button ${selectedAnswerCount === count ? 'active' : ''}`}
+                            onClick={() => setSelectedAnswerCount(selectedAnswerCount === count ? null : count)}
+                        >
+                            {count} إجابات
+                            ({currentFilteredQuestions.filter(q => q.options.length === count).length})
+                        </button>
+                    ))}
+                </div>
             </div>
 
             <p style={{ textAlign: 'right', padding: '10px 20px 10px 20px', fontWeight: 'bold' }}>
@@ -694,16 +763,25 @@ export default function Organiz_admin() {
                                                         </span>
                                                         <span className="option-text">{option.text}</span>
 
-                                                        {/* زر تغيير الإجابة الصحيحة */}
-                                                        {!option.isCorrect && (
+                                                        {/* أزرار الإجراءات على الخيار */}
+                                                        <div className="option-actions">
+                                                            {!option.isCorrect && (
+                                                                <button
+                                                                    className="action-button set-correct-button"
+                                                                    title="اجعل هذا الخيار هو الإجابة الصحيحة"
+                                                                    onClick={(e) => handleSwapCorrectAnswer(q._id, option.text, e)}
+                                                                >
+                                                                    اجعل صحيح
+                                                                </button>
+                                                            )}
                                                             <button
-                                                                className="action-button set-correct-button"
-                                                                title="اجعل هذا الخيار هو الإجابة الصحيحة"
-                                                                onClick={(e) => handleSwapCorrectAnswer(q._id, option.text, e)}
+                                                                className="action-button mini-delete-button"
+                                                                title="حذف هذه الإجابة"
+                                                                onClick={(e) => handleDeleteOptionDirectly(q._id, index, e)}
                                                             >
-                                                                اجعل صحيح
+                                                                🗑️ حذف
                                                             </button>
-                                                        )}
+                                                        </div>
                                                     </li>
                                                 ))}
                                             </ul>
