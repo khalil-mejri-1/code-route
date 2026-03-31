@@ -1,12 +1,7 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { FaArrowRight } from 'react-icons/fa';
+import { ArrowLeft } from 'lucide-react';
 
-/**
- * Global Back Button - Fixed Position (Floating)
- * Visible on all pages except Home ('/').
- * Placed outside the Navbar (e.g. top-left relative to content, or fixed).
- */
 const GlobalBackButton = () => {
     const navigate = useNavigate();
     const location = useLocation();
@@ -17,16 +12,15 @@ const GlobalBackButton = () => {
     }
 
     return (
-        <>
-
-        </>
-        // <button
-        //     className="global-back-floating"
-        //     onClick={() => navigate(-1)}
-        //     title="رجوع"
-        // >
-        //     <FaArrowRight /> رجوع
-        // </button>
+        <button
+            className="global-back-floating reveal-anim"
+            onClick={() => navigate(-1)}
+            title="رجوع للقائمة السابقة"
+            style={{ border: 'none', appearance: 'none', fontFamily: 'inherit' }}
+        >
+            <ArrowLeft size={18} />
+            <span>رجوع</span>
+        </button>
     );
 };
 

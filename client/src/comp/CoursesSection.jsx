@@ -1,72 +1,51 @@
 import React from 'react';
-import { BookOpen, GraduationCap, Award, TrendingUp } from 'lucide-react';
-// FaCheckCircle is imported but not used in the original structure, I will omit it for simplicity.
-// If it were intended for a different part of the design, it would be included.
+import { BookOpen, GraduationCap, Award, TrendingUp, ShieldCheck, Zap } from 'lucide-react';
 
-// Data for the features section
-const academyFeatures = [
+const modernFeatures = [
   {
-    icon: BookOpen,
-    title: 'دروس شاملة', // Comprehensive Lessons
-    description: 'محتوى تعليمي متكامل يغطي جميع جوانب قانون السير', // Integrated educational content covering all aspects of traffic law
-    color: '#3b82f6', // Blue
+    icon: <Zap />,
+    title: 'تعلم سريع وذكي',
+    description: 'تم تصميم نظامنا بطريقة تضمن استيعاب المفاهيم في أقل وقت ممكن.',
+    color: 'var(--primary)'
   },
   {
-    icon: GraduationCap,
-    title: 'اختبارات تفاعلية', // Interactive Exams
-    description: 'اختبارات محاكاة للواقع مع نظام تقييم فوري', // Reality simulation exams with an instant grading system
-    color: '#10b981', // Emerald/Green
+    icon: <GraduationCap />,
+    title: 'اختبارات محاكاة',
+    description: 'خض تجربة مشابهة للاختبار الرسمي تماماً مع نظام فوري للنتائج.',
+    color: 'var(--secondary)'
   },
- 
   {
-    icon: TrendingUp,
-    title: 'تتبع التقدم', // Track Progress
-    description: 'راقب تقدمك وإحصائياتك التعليمية بشكل مستمر', // Monitor your progress and learning statistics continuously
-    color: '#8b5cf6', // Violet/Purple
+    icon: <ShieldCheck />,
+    title: 'بيئة آمنة للمبتدئين',
+    description: 'كل ما تحتاجه من موارد وأدوات في مكان واحد ليكون طريقك سهلاً ومضموناً.',
+    color: 'var(--primary)'
   },
+  {
+    icon: <BookOpen />,
+    title: 'محتوى شامل وحصري',
+    description: 'دروس بصرية متقدمة، رسوم توضيحية، وفيديوهات تشرح القواعد المعقدة.',
+    color: 'var(--secondary)'
+  }
 ];
 
-/**
- * Renders a single feature card.
- * @param {object} props - The feature object.
- */
-const FeatureCard = ({ icon: Icon, title, description, color }) => (
-  <div className="feature-card">
-    <div
-      className="feature-icon"
-      // Apply a light background color based on the feature's primary color
-      style={{ backgroundColor: `${color}15` }}
-    >
-      {/* Icon component from lucide-react */}
-      <Icon size={70} style={{ color: color, padding: '10px' }} />
-    </div>
-    <h3 className="feature-title">{title}</h3>
-    <p className="feature-description">{description}</p>
-  </div>
-);
-
-
-/**
- * Main component to display the academy's features, structured as a "Courses Section" 
- * but using the features data.
- */
 const FeaturesSection = () => {
   return (
-    <section className="features-section">
-      <div className="features-header">
-        <h2 className="section-title_home">لماذا أكاديمية قانون السير؟ 🎓</h2> {/* Why Traffic Law Academy? */}
-        <p className="section-subtitle">نقدم لكم أهم المزايا لضمان نجاحكم في اختبارات قانون السير.</p> 
-        {/* We offer you the most important features to ensure your success in traffic law tests. */}
+    <section className="features-section premium-container">
+      <div className="section-head reveal-anim">
+        <span className="badge-new">لماذا منصتنا؟</span>
+        <h2>قوة التجربة و <span className="accent">رؤية المحترفين</span></h2>
+        <p className="hero-desc">نحن لا نعلمك فقط لتنجح، بل لتقود بذكاء وأمان.</p>
       </div>
-      
-      {/* The grid will map over the 'academyFeatures' data */}
+
       <div className="features-grid">
-        {academyFeatures.map((feature, index) => (
-          <FeatureCard 
-            key={index} 
-            // Spread all feature properties as props
-            {...feature} 
-          />
+        {modernFeatures.map((f, i) => (
+          <div className="feature-card-premium reveal-anim" key={i} style={{ animationDelay: `${i * 0.1}s` }}>
+            <div className="feature-icon-wrapper" style={{ boxShadow: `0 0 20px ${f.color}30` }}>
+              {f.icon}
+            </div>
+            <h3 className="card-h3">{f.title}</h3>
+            <p className="card-p">{f.description}</p>
+          </div>
         ))}
       </div>
     </section>

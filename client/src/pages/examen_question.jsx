@@ -1,81 +1,66 @@
-// src/pages/examen_question.js (الموضوعات الخاصة بالاختبار)
-
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import Navbar from '../comp/navbar';
+import axios from 'axios';
+import { API_BASE_URL } from '../config';
+import { Lock, ArrowLeft } from 'lucide-react';
 
-// 1. البيانات
-const licenseCategories = [
-    { id: 1, category: "العلامات و الاشارات", image: "https://i.pinimg.com/originals/54/83/72/5483725409b8436c9256c141723999da.gif" }, // ⭐️ هذه هي الفئة المسموح بها دائماً (ID: 1)
-    { id: 2, category: "الأولوية", image: "https://www.codepermis.net/upload/images/image.jpg" },
-    { id: 3, category: "قواعد الجولان", image: "https://www.codepermis.net/upload/images/en1g5vqv.jpg" },
-    { id: 4, category: "المخالفات و العقوبات", image: "https://www.almuraba.net/wp-content/uploads/2024/05/%D9%83%D9%85-%D9%85%D8%AE%D8%A7%D9%84%D9%81%D8%A9-%D8%A7%D9%84%D8%AC%D9%88%D8%A7%D9%84.jpg" },
-    { id: 5, category: "الصيانة", image: "https://elsafacarservice.com/wp-content/uploads/2024/08/%D9%85%D8%A7-%D9%87%D9%8A-%D8%A3%D9%86%D9%88%D8%A7%D8%B9-%D8%B5%D9%8A%D8%A7%D9%86%D8%A9-%D8%A7%D9%84%D8%B3%D9%8A%D8%A7%D8%B1%D8%A7%D8%AA.webp" },
-    { id: 6, category: "المقاطعة و المجاوزة", image: "https://www.codepermis.net/upload/images/s7300318.gif" },
-];
-
-// 2. مكون البطاقة الفردية (CardComponent)
 function CardComponent({ id, category, image, isLoggedIn, isSubscribed, mainCategory }) {
-
     let isCardDisabled;
     let overlayMessage;
 
-    // --- منطق التعطيل (المنطق الذي يضمن أن ID=1 مسموح به) ---
     if (!isLoggedIn) {
-        // 1. غير مسجل دخول: ممنوع (لأنه لا يمكننا تحديد ما إذا كان مشتركاً)
         isCardDisabled = true;
         overlayMessage = "سجّل الدخول للمتابعة";
     } else if (!isSubscribed && id !== 1) {
-        // 2. مسجل وغير مشترك: ممنوع على الجميع باستثناء ID=1
         isCardDisabled = true;
-        overlayMessage = "هذا الاختبار متاح للمشتركين فقط";
+        overlayMessage = "هذا الموضوع متاح للمشتركين فقط";
     } else {
-        // 3. مسجل ومشترك، أو مسجل ويحاول الوصول لـ ID=1
         isCardDisabled = false;
         overlayMessage = "";
     }
-    // --------------------------------------------------------
 
-    const cardClassName = `card-link ${isCardDisabled ? 'card-disabled' : ''}`;
+    const newCategoryParam = encodeURIComponent(mainCategory.trim()) + ' / ' + encodeURIComponent(category.trim());
     const Wrapper = isCardDisabled ? 'div' : Link;
-
-    const mainCategoryClean = mainCategory.trim();
-    const categoryClean = category.trim();
-
-    // بناء رابط URL المدمج
-    const newCategoryParam = encodeURIComponent(mainCategoryClean) + ' / ' + encodeURIComponent(categoryClean);
-
-    const linkProps = !isCardDisabled
-        // ⭐️ التوجيه لصفحة اختيار السلسلة بدلاً من الاختبار مباشرة
-        ? { to: `/examen/series?category=${newCategoryParam}` }
-        : {};
+    const linkProps = !isCardDisabled ? { to: `/examen/series?category=${newCategoryParam}` } : {};
 
     return (
-        <Wrapper {...linkProps} className={cardClassName}>
-            <div className="license-card">
-                <div className="card-image-container">
-                    <img
-                        src={image}
-                        alt={`صورة فئة ${category}`}
-                        className="card-image-cours-category"
-                    />
-                </div>
-                <div className="card-info">
-                    <h3 className="card-category" > {category} في {mainCategory}</h3>
+        <Wrapper {...linkProps} className={`premium-card reveal-anim ${isCardDisabled ? 'disabled' : ''}`}>
+            <div className="card-img-wrapper">
+                <img src={image} alt={category} />
+                {isCardDisabled && (
+                    <div className="overlay-premium">
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px' }}>
+                            <Lock size={40} color="var(--primary)" />
+                            <p style={{ fontSize: '14px', maxWidth: '200px' }}>{overlayMessage}</p>
+                            {!isLoggedIn ? (
+                                <button className="btn-premium-sm">سجّل دخول</button>
+                            ) : (
+                                <button className="btn-premium-sm">اشترك الآن</button>
+                            )}
+                        </div>
+                    </div>
+                )}
+            </div>
+            <div className="card-body-premium">
+
+                <h3 className="card-title-premium">{category}</h3>
+                <p className="card-desc-premium">قيّم مستواك في قواعد {category} ضمن صنف {mainCategory} بأسلوب محاكاة واقعي.</p>
+
+                <div style={{ marginTop: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '12px', color: 'var(--text-dim)', fontWeight: 600 }}>بدأ الاختبار</span>
+                    <div className="card-nav-btn">
+                        <ArrowLeft size={18} />
+                    </div>
                 </div>
             </div>
-
-            {isCardDisabled && (
-                <div className="disabled-overlay">
-                    {overlayMessage}
-                </div>
-            )}
         </Wrapper>
     );
 }
 
-// 3. المكون الرئيسي (examen_question)
 export default function Examen_question() {
+    const [topics, setTopics] = useState([]);
+    const [loading, setLoading] = useState(true);
     const isLoggedIn = localStorage.getItem('login') === 'true';
     const isSubscribed = localStorage.getItem('subscriptions') === 'true';
     const location = useLocation();
@@ -83,34 +68,54 @@ export default function Examen_question() {
     const urlParams = new URLSearchParams(location.search);
     const mainCategory = urlParams.get('category') || 'B';
 
-    return (
-        <>
-            <Navbar />
-            <h2 className="main-title" >
-                ({mainCategory}) اختَر الموضوع الذي تريد الاختبار فيه
-            </h2>
-            <div className="cards-grid-container">
+    useEffect(() => {
+        const fetchTopics = async () => {
+            try {
+                const response = await axios.get(`${API_BASE_URL}/topics?category=${encodeURIComponent(mainCategory)}`);
+                setTopics(response.data);
+            } catch (error) {
+                console.error('Error fetching topics:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchTopics();
+    }, [mainCategory]);
 
-                {licenseCategories.map((item) => (
-                    <CardComponent
-                        key={item.id}
-                        id={item.id}
-                        category={item.category}
-                        image={item.image}
-                        isLoggedIn={isLoggedIn}
-                        isSubscribed={isSubscribed}
-                        mainCategory={mainCategory}
-                    />
-                ))}
-
-                {/* رسالة للتذكير بالاشتراك */}
-                {isLoggedIn && !isSubscribed && (
-                    <p style={{ textAlign: 'center', width: '100%', marginTop: '30px', color: '#3498db', fontWeight: 'bold' }}>
-                        لفتح جميع المواضيع ({licenseCategories.length - 1} مواضيع أخرى)، يرجى الاشتراك في باقاتنا!
-                    </p>
-                )}
+    if (loading) {
+        return (
+            <div style={{ background: 'var(--bg-deep)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div className="reveal-anim" style={{ color: 'var(--primary)', fontWeight: 800, fontSize: '24px' }}>جاري تحميل الاختبارات... ✍️</div>
             </div>
-        </>
+        );
+    }
+
+    return (
+        <div style={{ background: 'var(--bg-deep)', minHeight: '100vh' }}>
+            <Navbar />
+            <div className="page-container">
+                <div className="page-header reveal-anim">
+                    <span className="badge-new">محاور اختبارات فئة {mainCategory}</span>
+                    <h1 className="page-title">مركز <span className="accent">الاختبارات</span></h1>
+                    <p className="hero-desc" style={{ maxWidth: '600px', margin: '0 auto' }}>
+                        اختر المحور الذي تريد اختباره وتأكد من جاهزيتك الكاملة للامتحان الرسمي من خلال أسئلة محاكاة واقعية.
+                    </p>
+                </div>
+
+                <div className="cards-grid">
+                    {topics.map((item, index) => (
+                        <CardComponent
+                            key={index}
+                            id={index + 1}
+                            category={item.name}
+                            image={item.image}
+                            isLoggedIn={isLoggedIn}
+                            isSubscribed={isSubscribed}
+                            mainCategory={mainCategory}
+                        />
+                    ))}
+                </div>
+            </div>
+        </div>
     );
 }
-

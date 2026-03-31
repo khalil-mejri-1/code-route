@@ -3,109 +3,84 @@ import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../comp/navbar';
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
+import { ChevronLeft, Lock } from 'lucide-react';
 
-// 2. مكون البطاقة الفردية (CardComponent)
-function CardComponent({ id, category, description, image, isLoggedIn, isSubscribed }) {
+function CardComponent({ category, description, image, isLoggedIn, isSubscribed }) {
     const navigate = useNavigate();
     let isCardDisabled;
     let overlayMessage;
 
-    // --- المنطق المصحح الجديد (يعتمد على حالة الاشتراك) ---
-
     if (!isLoggedIn) {
-        // الحالة 1: غير مسجل للدخول
         isCardDisabled = true;
         overlayMessage = "سجّل الدخول للمتابعة";
     } else if (!isSubscribed && category !== "B") {
-        // الحالة 2: مسجل، ولكنه غير مشترك، والصنف ليس مجانياً
         isCardDisabled = true;
         overlayMessage = "هذا الصنف متاح للمشتركين فقط";
     } else {
-        // الحالة 3: مسموح بالوصول
         isCardDisabled = false;
         overlayMessage = "";
     }
 
-    const [isChecked, setIsChecked] = useState(() => {
-        const saved = localStorage.getItem(`checked_course_${category}`);
-        return saved === 'true';
-    });
-
-    const toggleCheck = (e) => {
-        e.stopPropagation();
-        const newValue = !isChecked;
-        setIsChecked(newValue);
-        localStorage.setItem(`checked_course_${category}`, newValue);
-    };
-
-    const handleCardClick = async (e) => {
-        if (isCardDisabled) {
-            e.preventDefault();
-            return;
-        }
+    const handleCardClick = async () => {
+        if (isCardDisabled) return;
 
         try {
-            // Check if there are sub-topics for this category
             const response = await axios.get(`${API_BASE_URL}/topics?category=${encodeURIComponent(category)}`);
             const topics = response.data;
 
             if (topics.length === 0) {
-                // No sub-topics? Go directly to series selection
                 navigate(`/cours/series?category=${encodeURIComponent(category)}`);
             } else {
-                // Has sub-topics? Go to topics selection page
                 navigate(`/Cours_question?category=${encodeURIComponent(category)}`);
             }
         } catch (error) {
             console.error("Error checking topics:", error);
-            // Default to topics page if check fails
             navigate(`/Cours_question?category=${encodeURIComponent(category)}`);
         }
     };
 
     return (
-        <div
-            onClick={handleCardClick}
-            className={`card-link ${isCardDisabled ? 'card-disabled' : ''} ${isChecked ? 'card-checked' : ''}`}
-            style={{ cursor: isCardDisabled ? 'not-allowed' : 'pointer' }}
+        <div 
+            onClick={handleCardClick} 
+            className={`premium-card reveal-anim ${isCardDisabled ? 'disabled' : ''}`}
         >
-            <div
-                className={`checkmark-btn ${isChecked ? 'checked' : ''}`}
-                onClick={toggleCheck}
-                title="حدد كمكتمل"
-            >
-                <span className="checkmark-icon">{isChecked ? '✓' : '✓'}</span>
+            <div className="card-img-wrapper">
+                <img src={image} alt={category} />
+                {isCardDisabled && (
+                    <div className="overlay-premium">
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px' }}>
+                            <Lock size={40} color="var(--primary)" />
+                            <p>{overlayMessage}</p>
+                            {!isLoggedIn ? (
+                                <button className="btn-premium-sm" onClick={() => navigate('/login')}>تسجيل الدخول</button>
+                            ) : (
+                                <button className="btn-premium-sm" onClick={() => navigate('/subscriptions')}>اشترك الآن</button>
+                            )}
+                        </div>
+                    </div>
+                )}
             </div>
-            <div className="license-card">
-                <div className="card-image-container">
-                    <img
-                        src={image}
-                        alt={`صورة فئة ${category}`}
-                        className="card-image"
-                    />
+            <div className="card-body-premium">
+                <div className="badge-float" style={{ background: category === 'B' ? 'var(--secondary)' : 'var(--primary)' }}>
+                    {category === 'B' ? 'مجاني' : 'دروس VIP'}
                 </div>
-                <div className="card-info">
-                    <h3 className="card-category">الفئة: {category}</h3>
-                    <p className="card-description">{description}</p>
+                <h3 className="card-title-premium">صنف {category}</h3>
+                <p className="card-desc-premium">{description}</p>
+                
+                <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
+                    <div style={{ padding: '8px', border: '1px solid var(--glass-border)', borderRadius: '50%' }}>
+                        <ChevronLeft size={20} color="var(--primary)" />
+                    </div>
                 </div>
             </div>
-
-            {/* تراكب رسالة التعطيل */}
-            {isCardDisabled && (
-                <div className="disabled-overlay">
-                    {overlayMessage}
-                </div>
-            )}
         </div>
     );
 }
 
-// 3. المكون الرئيسي (Cours)
 export default function Cours() {
     const [licenseCategories, setLicenseCategories] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    // ⭐️ قراءة حالتي login و subscriptions
     const isLoggedIn = localStorage.getItem('login') === 'true';
     const isSubscribed = localStorage.getItem('subscriptions') === 'true';
 
@@ -124,26 +99,38 @@ export default function Cours() {
     }, []);
 
     if (loading) {
-        return <div style={{ color: 'white', textAlign: 'center', marginTop: '50px' }}>جاري التحميل...</div>;
+        return (
+            <div style={{ background: 'var(--bg-deep)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div className="reveal-anim" style={{ color: 'var(--primary)', fontWeight: 800, fontSize: '24px' }}>جاري التحميل...</div>
+            </div>
+        );
     }
 
     return (
-        <>
+        <div style={{ background: 'var(--bg-deep)', minHeight: '100vh' }}>
             <Navbar />
-            <h2 className="main-title">اختَر فئة رخصة القيادة للدراسة</h2>
-            <div className="cards-grid-container">
-                {licenseCategories.map((item, index) => (
-                    <CardComponent
-                        key={item._id || index}
-                        id={index + 1} // للتبسيط في معالجة الفئة B كمجانية
-                        category={item.category}
-                        description={item.description}
-                        image={item.image}
-                        isLoggedIn={isLoggedIn}
-                        isSubscribed={isSubscribed}
-                    />
-                ))}
+            <div className="page-container">
+                <div className="page-header reveal-anim">
+                     <span className="badge-new">المكتبة التعليمية</span>
+                     <h1 className="page-title">اختر فئة <span className="accent">رخصة القيادة</span></h1>
+                     <p className="hero-desc" style={{ maxWidth: '600px', margin: '0 auto' }}>
+                        نقدم لك محتوى تعليمي متخصص لكل فئة، مصمم لمساعدتك على النجاح من المرة الأولى.
+                     </p>
+                </div>
+
+                <div className="cards-grid">
+                    {licenseCategories.map((item, index) => (
+                        <CardComponent
+                            key={index}
+                            category={item.category}
+                            description={item.description}
+                            image={item.image}
+                            isLoggedIn={isLoggedIn}
+                            isSubscribed={isSubscribed}
+                        />
+                    ))}
+                </div>
             </div>
-        </>
+        </div>
     );
 }

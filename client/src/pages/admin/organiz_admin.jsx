@@ -302,6 +302,7 @@ export default function Organiz_admin() {
     // NEW STATE: حالة نافذة التعديل المنبثقة
     const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
     const [questionToUpdate, setQuestionToUpdate] = useState(null);
+    const [globalDeleteText, setGlobalDeleteText] = useState('');
 
 
 
@@ -529,6 +530,39 @@ export default function Organiz_admin() {
         setTimeout(() => setSwapStatus(null), 5000);
     };
 
+    // ⭐️ وظيفة حذف خيار من جميع الأسئلة
+    const handleDeleteOptionGlobally = async () => {
+        if (!globalDeleteText.trim()) {
+            alert('يرجى إدخال نص الخيار المراد حذفه.');
+            return;
+        }
+
+        if (!window.confirm(`⚠️ تحذير: سيتم حذف الخيار "${globalDeleteText}" نهائيًا من جميع الأسئلة التي تحتوي عليه. هل تريد الاستمرار؟`)) {
+            return;
+        }
+
+        setSwapStatus({ type: 'loading', message: '🔄 جارٍ حذف الخيار من جميع الأسئلة...' });
+
+        try {
+            const response = await axios.post(`${API_BASE_URL}/questions/delete-option-globally`, {
+                optionText: globalDeleteText.trim()
+            });
+
+            // تحديث حالة الأسئلة في الواجهة
+            setQuestions(prevQuestions => prevQuestions.map(q => ({
+                ...q,
+                options: q.options.filter(opt => opt.text !== globalDeleteText.trim())
+            })));
+
+            setGlobalDeleteText('');
+            setSwapStatus({ type: 'success', message: `${response.data.message}` });
+        } catch (err) {
+            console.error('Delete global option failed:', err);
+            setSwapStatus({ type: 'error', message: '❌ فشل حذف الخيار عالميًا.' });
+        }
+        setTimeout(() => setSwapStatus(null), 5000);
+    };
+
 
     // 6. منطق الفلترة والبحث (لم يتغير)
     let currentFilteredQuestions = selectedCategory
@@ -700,7 +734,7 @@ export default function Organiz_admin() {
                         مسح التحديد
                     </button>
 
-                    <div className="search-input-container" style={{ marginBottom: '20px' }}>
+                    <div className="search-input-container">
                         <input
                             type="text"
                             placeholder="ابحث في نص السؤال أو الإجابة..."
@@ -709,6 +743,24 @@ export default function Organiz_admin() {
                             className="search-input"
                             dir="rtl"
                         />
+                    </div>
+
+                    <div className="global-action-box" style={{ marginLeft: 'auto', display: 'flex', gap: '8px', borderRight: '2px solid #ddd', paddingRight: '15px' }}>
+                        <input
+                            type="text"
+                            placeholder="حذف خيار من الجميع..."
+                            value={globalDeleteText}
+                            onChange={(e) => setGlobalDeleteText(e.target.value)}
+                            style={{ padding: '8px', borderRadius: '5px', border: '1px solid #ccc', fontSize: '13px' }}
+                            dir="rtl"
+                        />
+                        <button 
+                            className="action-button delete-button" 
+                            onClick={handleDeleteOptionGlobally}
+                            style={{ fontSize: '12px', padding: '8px 12px' }}
+                        >
+                            🗑️ حذف من الجميع
+                        </button>
                     </div>
                 </div>
                 {swapStatus && (

@@ -6,7 +6,7 @@ import { API_BASE_URL, IMGBB_API_KEY, IMGBB_UPLOAD_URL } from '../../config';
 const API_URL_BATCH = `${API_BASE_URL}/quiz/questions/batch`;
 
 const LICENSE_TYPES = [
-    "B", "A", "AA", "Z", "D", "CE", "C"
+    "B", "A", "AA", "Z", "D", "CE", "C", "امتحانات"
 ];
 
 const TOPIC_CATEGORIES = [
@@ -76,6 +76,9 @@ export default function Admin2() {
     const [allCategories, setAllCategories] = useState([]);
     const [editingCategory, setEditingCategory] = useState(null); // { _id, category, description, image }
     const [catMessage, setCatMessage] = useState('');
+    const [newCategory, setNewCategory] = useState({ category: '', description: '', image: '' });
+    const [addingCategory, setAddingCategory] = useState(false);
+
 
     const fetchAllCategories = async () => {
         try {
@@ -101,6 +104,26 @@ export default function Admin2() {
             alert('فشل في التحديث');
         }
     };
+
+    const handleAddCategory = async () => {
+        if (!newCategory.category) {
+            alert('يجب إدخال اسم الفئة');
+            return;
+        }
+        setAddingCategory(true);
+        try {
+            await axios.post(`${API_BASE_URL}/categories`, newCategory);
+            setCatMessage('تمت إضافة الفئة بنجاح!');
+            setNewCategory({ category: '', description: '', image: '' });
+            fetchAllCategories();
+            setTimeout(() => setCatMessage(''), 2000);
+        } catch (err) {
+            alert('فشل في إضافة الفئة');
+        } finally {
+            setAddingCategory(false);
+        }
+    };
+
 
     // Deletion State
     const [deleteCategory, setDeleteCategory] = useState(LICENSE_TYPES[0]);
@@ -577,7 +600,32 @@ export default function Admin2() {
 
                             {catMessage && <div style={{ ...styles.success, marginBottom: '10px' }}>{catMessage}</div>}
 
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            {/* Add New Category Form */}
+                            <div style={{ ...styles.section, padding: '10px', backgroundColor: '#f8f9fa', border: '1px solid #dee2e6' }}>
+                                <h4>➕ إضافة فئة جديدة</h4>
+                                <input
+                                    style={{ ...styles.input, marginBottom: '5px' }}
+                                    value={newCategory.category}
+                                    onChange={e => setNewCategory({ ...newCategory, category: e.target.value })}
+                                    placeholder="اسم الفئة (مثلاً: امتحانات)"
+                                />
+                                <input
+                                    style={{ ...styles.input, marginBottom: '5px' }}
+                                    value={newCategory.description}
+                                    onChange={e => setNewCategory({ ...newCategory, description: e.target.value })}
+                                    placeholder="الوصف"
+                                />
+                                <button
+                                    onClick={handleAddCategory}
+                                    disabled={addingCategory}
+                                    style={{ ...styles.button, backgroundColor: '#28a745', fontSize: '0.9em' }}
+                                >
+                                    {addingCategory ? 'جاري الإضافة...' : 'إضافة الفئة'}
+                                </button>
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '15px' }}>
+
                                 {allCategories.map(cat => (
                                     <div key={cat._id} style={{ padding: '10px', border: '1px solid #eee', borderRadius: '5px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                         {editingCategory?._id === cat._id ? (

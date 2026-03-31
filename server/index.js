@@ -340,8 +340,182 @@ app.delete('/api/questions/:id', async (req, res) => {
         });
     }
 });
+
+// --- مسار API لحذف مجموعة من الأسئلة دفعة واحدة ---
+app.post('/api/questions/batch-delete', async (req, res) => {
+    try {
+        const { ids } = req.body;
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ message: 'الرجاء إرسال مصفوفة من المعرفات (IDs) للحذف.' });
+        }
+
+        const result = await Question.deleteMany({ _id: { $in: ids } });
+
+        res.status(200).json({
+            message: `✅ تم حذف ${result.deletedCount} سؤال بنجاح!`,
+            deletedCount: result.deletedCount
+        });
+    } catch (error) {
+        console.error('Error deleting batch questions:', error);
+        res.status(500).json({
+            message: '❌ فشل في حذف مجموعة الأسئلة.',
+            error: error.message
+        });
+    }
+});
+
+// --- مسار API لحذف خيار معين من جميع الأسئلة دفعة واحدة ---
+app.post('/api/questions/delete-option-globally', async (req, res) => {
+    try {
+        const { optionText } = req.body;
+        if (!optionText || optionText.trim() === "") {
+            return res.status(400).json({ message: 'الرجاء إدخال نص الخيار المراد حذفه.' });
+        }
+
+        const trimmedText = optionText.trim();
+
+        // حذف الخيار من مصفوفة options في جميع الأسئلة
+        const result = await Question.updateMany(
+            { "options.text": trimmedText },
+            { $pull: { options: { text: trimmedText } } }
+        );
+
+        res.status(200).json({
+            message: `✅ تم حذف الخيار "${trimmedText}" من بنجاح!`,
+            modifiedCount: result.modifiedCount
+        });
+    } catch (error) {
+        console.error('Error deleting global option:', error);
+        res.status(500).json({
+            message: '❌ فشل في حذف الخيار عالميًا.',
+            error: error.message
+        });
+    }
+});
+
+// ------------------------------------------------------------------
+// ⭐️⭐️ NEW ENDPOINT: تحويل سلسلة من فئة إلى أخرى مع تغيير رقمها تلقائياً ⭐️⭐️
+// ------------------------------------------------------------------
+app.post('/api/quiz/series/move', async (req, res) => {
+    try {
+        const { sourceCategory, sourceSeries, targetCategory } = req.body;
+
+        if (!sourceCategory || !sourceSeries || !targetCategory) {
+            return res.status(400).json({ message: 'يجب تقديم الفئة المصدر، قائمة السلاسل، والفئة الهدف.' });
+        }
+
+        // تحويل sourceSeries إلى مصفوفة إذا لم تكن كذلك
+        const seriesToMove = Array.isArray(sourceSeries) ? sourceSeries : [sourceSeries];
+
+        let movedCountTotal = 0;
+        let migrationMapping = [];
+
+        // نقوم بمعالجة كل سلسلة واحدة تلو الأخرى للتأكد من الترقيم الصحيح
+        for (const serieNum of seriesToMove) {
+            // 1. البحث عن أعلى رقم سلسلة في الفئة الهدف (في كل تكرار لضمان الترقيم المتسلسل)
+            const targetSeries = await Question.distinct('nb_serie', { category1: targetCategory.trim() });
+            let newSerieNumber = 1;
+            if (targetSeries.length > 0) {
+                newSerieNumber = Math.max(...targetSeries) + 1;
+            }
+
+            // 2. تحديث جميع الأسئلة التي تنطبق عليها الشروط
+            const result = await Question.updateMany(
+                {
+                    category1: sourceCategory.trim(),
+                    nb_serie: parseInt(serieNum)
+                },
+                {
+                    $set: {
+                        category1: targetCategory.trim(),
+                        nb_serie: newSerieNumber
+                    }
+                }
+            );
+
+            if (result.matchedCount > 0) {
+                movedCountTotal += result.modifiedCount;
+                migrationMapping.push({ old: serieNum, new: newSerieNumber });
+            }
+        }
+
+        if (movedCountTotal === 0) {
+            return res.status(404).json({ message: '❌ لم يتم العثور على أي أسئلة في السلاسل المحددة بالفئة المصدر.' });
+        }
+
+        res.status(200).json({
+            message: `✅ تم نقل ${seriesToMove.length} سلسلة بنجاح!`,
+            movedCountTotal,
+            migrationMapping
+        });
+
+    } catch (error) {
+        console.error('Error moving series:', error);
+        res.status(500).json({
+            message: '❌ فشل في عملية نقل السلسلة.',
+            error: error.message
+        });
+    }
+});
 // ------------------------------------------------------------------
 
+// ⭐️⭐️ NEW ENDPOINT: اختبار شامل لفئة كاملة (جميع السلاسل والفئات الفرعية) ⭐️⭐️
+app.get('/api/quiz/exam', async (req, res) => {
+    try {
+        const { category1, category2, examSerie } = req.query;
+
+        if (!category1) {
+            return res.status(400).json({ message: 'يجب تقديم الفئة 1.' });
+        }
+
+        const query = { category1: category1.trim() };
+        if (category2) {
+            query.category2 = category2.trim();
+        }
+
+        // جلب جميع الأسئلة التي تطابق الشروط
+        const questions = await Question.find(query).exec();
+
+        // خلط الأسئلة عشوائياً
+        let shuffled = questions.sort(() => Math.random() - 0.5);
+
+        // دمج 5 أسئلة عشوائية من الفئة + أسئلة سلسلة الامتحان المحددة
+        if (examSerie && category1.trim() !== 'امتحانات') {
+            const categoryQuestionsCount = 5;
+            const randomCategoryQuestions = shuffled.slice(0, categoryQuestionsCount);
+
+            const examSerieQuery = {
+                category1: 'امتحانات',
+                nb_serie: parseInt(examSerie)
+            };
+            const examQuestions = await Question.find(examSerieQuery).exec();
+
+            let filteredExamQuestions = [];
+            if (examQuestions.length > categoryQuestionsCount) {
+                // حذف آخر 5 أسئلة
+                filteredExamQuestions = examQuestions.slice(0, examQuestions.length - categoryQuestionsCount);
+            } else {
+                filteredExamQuestions = examQuestions;
+            }
+
+            // دمج الخليط (5 من الفئة المحددة و الباقي من الامتحان)
+            shuffled = randomCategoryQuestions.concat(filteredExamQuestions);
+            
+            // خلط الناتج النهائي ليتم توزيع أسئلة الفئة الأولى (الـ 5 العشوائية) طوال الامتحان
+            shuffled = shuffled.sort(() => Math.random() - 0.5);
+        } else if (!examSerie) {
+            // إذا لم يتم تحديد سلسلة نعيد 30 سؤال كالتالي مثلاً (بناءً على طلب سابق لتحديد عدد معين)
+            // سنركز على إعادة 30 سؤال كحد أقصى أو ما يجده
+            shuffled = shuffled.slice(0, 30);
+        }
+
+        res.status(200).json(shuffled);
+
+    } catch (error) {
+        console.error('Error fetching exam questions:', error);
+        res.status(500).json({ message: 'فشل في جلب أسئلة الاختبار الشامل.', error: error.message });
+    }
+});
 // ------------------------------------------------------------------
 
 
@@ -378,6 +552,7 @@ app.get('/api/categories', async (req, res) => {
                 { category: "D", description: "دروس في D", image: "https://www.codedelaroute.tn/images/d.png" },
                 { category: "D1", description: "دروس في D1", image: "https://www.codedelaroute.tn/images/d1.png" },
                 { category: "D+E / D1+E", description: "دروس في D+E / D1+E", image: "https://www.codedelaroute.tn/images/d+e.png" },
+                { category: "امتحانات", description: "امتحانات تجريبية", image: "https://www.codedelaroute.tn/images/exam.png" },
             ];
             categories = await Category.insertMany(defaultCategories);
         }

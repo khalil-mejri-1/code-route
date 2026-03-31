@@ -3,14 +3,13 @@ import Navbar from '../comp/navbar';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
+import { Trophy, Lock, ChevronLeft } from 'lucide-react';
 
-// 2. مكون البطاقة الفردية (تم تحديثه لإضافة منطق التعطيل)
-function CardComponent({ id, category, description, image, isLoggedIn, isSubscribed }) {
+function CardComponent({ category, description, image, isLoggedIn, isSubscribed }) {
     const navigate = useNavigate();
     let isCardDisabled;
     let overlayMessage;
 
-    // --- المنطق الشرطي للتحكم في الوصول (نفس منطق Cours.js) ---
     if (!isLoggedIn) {
         isCardDisabled = true;
         overlayMessage = "سجّل الدخول للمتابعة";
@@ -22,63 +21,60 @@ function CardComponent({ id, category, description, image, isLoggedIn, isSubscri
         overlayMessage = "";
     }
 
-    const handleCardClick = async (e) => {
-        if (isCardDisabled) {
-            e.preventDefault();
-            return;
-        }
+    const handleCardClick = async () => {
+        if (isCardDisabled) return;
 
-        // Logic to check for topics before navigating
         try {
             const res = await axios.get(`${API_BASE_URL}/topics?category=${encodeURIComponent(category)}`);
             if (res.data.length === 0) {
-                // No topics? Go straight to series
                 navigate(`/examen/series?category=${encodeURIComponent(category)}`);
             } else {
-                // Has topics? Go to topics selection
                 navigate(`/examen_question?category=${encodeURIComponent(category)}`);
             }
         } catch (error) {
             console.error("Error checking topics:", error);
-            // Default behavior if check fails
             navigate(`/examen_question?category=${encodeURIComponent(category)}`);
         }
     };
 
     return (
-        <div
-            onClick={handleCardClick}
-            className={`card-link ${isCardDisabled ? 'card-disabled' : ''}`}
-            style={{ cursor: isCardDisabled ? 'not-allowed' : 'pointer' }}
+        <div 
+            onClick={handleCardClick} 
+            className={`premium-card reveal-anim ${isCardDisabled ? 'disabled' : ''}`}
         >
-            <div className="license-card">
-                <div className="card-image-container">
-                    <img
-                        src={image}
-                        alt={`صورة فئة ${category}`}
-                        className="card-image"
-                        onError={(e) => {
-                            e.target.onerror = null;
-                            e.target.src = "https://placehold.co/100x100/CCCCCC/000000?text=صورة+غير+متوفرة";
-                        }}
-                    />
+            <div className="card-img-wrapper">
+                <img src={image} alt={category} />
+                {isCardDisabled && (
+                    <div className="overlay-premium">
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px' }}>
+                            <Lock size={40} color="var(--primary)" />
+                            <p>{overlayMessage}</p>
+                            {!isLoggedIn ? (
+                                <button className="btn-premium-sm" onClick={() => navigate('/login')}>تسجيل الدخول</button>
+                            ) : (
+                                <button className="btn-premium-sm" onClick={() => navigate('/subscriptions')}>اشترك الآن</button>
+                            )}
+                        </div>
+                    </div>
+                )}
+            </div>
+            <div className="card-body-premium">
+                <div className="badge-float" style={{ background: category === 'B' ? 'var(--secondary)' : 'var(--primary)' }}>
+                    {category === 'B' ? 'تجريبي' : 'اختبار VIP'}
                 </div>
-                <div className="card-info">
-                    <h3 className="card-category">الفئة: {category}</h3>
-                    <p className="card-description">{description.replace('دروس', 'اختبارات')}</p>
+                <h3 className="card-title-premium">اختبارات صنف {category}</h3>
+                <p className="card-desc-premium">{description.replace('دروس', 'اختبارات')}</p>
+                
+                <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
+                    <div style={{ padding: '8px', border: '1px solid var(--glass-border)', borderRadius: '50%' }}>
+                        <ChevronLeft size={20} color="var(--primary)" />
+                    </div>
                 </div>
             </div>
-
-            {isCardDisabled && (
-                <div className="disabled-overlay">
-                    {overlayMessage}
-                </div>
-            )}
         </div>
     );
 }
 
-// 3. المكون الرئيسي
 export default function Examen() {
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -100,26 +96,38 @@ export default function Examen() {
     }, []);
 
     if (loading) {
-        return <div style={{ color: 'white', textAlign: 'center', marginTop: '50px' }}>جاري التحميل...</div>;
+        return (
+            <div style={{ background: 'var(--bg-deep)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div className="reveal-anim" style={{ color: 'var(--primary)', fontWeight: 800, fontSize: '24px' }}>جاري التحميل...</div>
+            </div>
+        );
     }
 
     return (
-        <>
+        <div style={{ background: 'var(--bg-deep)', minHeight: '100vh' }}>
             <Navbar />
-            <h2 className="main-title">اختَر فئة رخصة القيادة للاختبار</h2>
-            <div className="cards-grid-container">
-                {categories.map((item, index) => (
-                    <CardComponent
-                        key={item._id || index}
-                        id={index + 1}
-                        category={item.category}
-                        description={item.description}
-                        image={item.image}
-                        isLoggedIn={isLoggedIn}
-                        isSubscribed={isSubscribed}
-                    />
-                ))}
+            <div className="page-container">
+                <div className="page-header reveal-anim">
+                     <span className="badge-new">مركز الاختبارات</span>
+                     <h1 className="page-title">مستعد <span className="accent">للتحدي؟</span></h1>
+                     <p className="hero-desc" style={{ maxWidth: '600px', margin: '0 auto' }}>
+                        اختر فئتك وابدأ اختبارات تحاكي الواقع تماماً. قيم مستواك الآن واضمن نجاحك في الامتحان الرسمي.
+                     </p>
+                </div>
+
+                <div className="cards-grid">
+                    {categories.map((item, index) => (
+                        <CardComponent
+                            key={index}
+                            category={item.category}
+                            description={item.description}
+                            image={item.image}
+                            isLoggedIn={isLoggedIn}
+                            isSubscribed={isSubscribed}
+                        />
+                    ))}
+                </div>
             </div>
-        </>
+        </div>
     );
 }

@@ -1,79 +1,90 @@
 import React from 'react';
-import { FaCheck, FaTimes } from 'react-icons/fa'; // أيقونات صح وخطأ
+import { Check, Shield, Star, Crown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-// (استخدم البيانات أعلاه)
-const pricingPlans = [
-  // ... (بيانات الخطط) ...
-
+const premiumPlans = [
   {
-    name: 'شهري',
-    tagline: 'وصول كامل لمدة شهر واحد',
-    price: '99',
-    currency: 'دينار تونسي',
-    features: [
-      { text: 'الوصول إلى جميع الدروس', included: true },
-      { text: 'اختبارات عملية غير محدودة', included: true },
-      { text: 'تصحيحات مفصلة', included: true },
-      { text: 'الاجابة عن الاستفسارات  24/24', included: true },
-    ],
-    buttonText: 'اشترك',
-    highlight: true,
+    name: 'الخطة الأساسية',
+    icon: <Shield size={24} />,
+    price: '49',
+    period: '/ شهر',
+    features: ['الوصول لجميع الدروس', 'اختبارات تجريبية محدودة', 'تتبع التقدم الأساسي'],
+    highlight: false,
+    cta: 'ابدأ مجاناً'
   },
-
+  {
+    name: 'الباقة الذهبية',
+    icon: <Star size={24} />,
+    price: '99',
+    period: '/ شهر',
+    features: ['كل ما في الأساسية', 'اختبارات غير محدودة', 'دعم مباشر 24/7', 'تصحيح مفصل'],
+    highlight: true,
+    cta: 'اشترك الآن'
+  },
+  {
+    name: 'حزمة النخبة',
+    icon: <Crown size={24} />,
+    price: '249',
+    period: '/ 6 أشهر',
+    features: ['كل المميزات المفتوحة', 'دروس فيديو حصرية', 'مدير حساب خاص', 'شهادة إتمام'],
+    highlight: false,
+    cta: 'انطلق للاحتراف'
+  }
 ];
-
-const PricingCard = ({ plan }) => {
-  const isHighlight = plan.highlight;
-  const buttonClass = isHighlight ? 'btn-primary' : 'btn-outline';
-
-  return (
-    <div className={`pricing-card ${isHighlight ? 'highlighted' : ''}`}>
-      <h3 className="plan-name">{plan.name}</h3>
-      <p className="plan-tagline">{plan.tagline}</p>
-
-      <div className="plan-price">
-        <span className="price-number">{plan.price}</span>
-        <span className="price-currency">{plan.currency}</span>
-      </div>
-
-      <button className={buttonClass}>
-        {plan.buttonText}
-      </button>
-
-      <ul className="plan-features">
-        {plan.features.map((feature, index) => (
-          <li key={index} className={feature.included ? 'included' : 'excluded'}>
-            {feature.included ? (
-              <FaCheck className="feature-icon check" />
-            ) : (
-              <FaTimes className="feature-icon times" />
-            )}
-            {feature.text}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-};
 
 const PricingSection = () => {
   return (
-    <div className="pricing-container">
-      <div className="pricing-header">
-        <h2 className="pricing-title">خطط الاشتراك</h2>
-        <p className="pricing-subtitle">اختر الخطة المناسبة لك</p>
-      </div>
-      <Link style={{ textDecoration: "none" }} to="/subscriptions">
-        <div className="pricing-grid">
-          {pricingPlans.map((plan, index) => (
-            <PricingCard key={index} plan={plan} />
-          ))}
+    <section className="pricing-section">
+      <div className="premium-container reveal-anim">
+        <div className="section-head">
+          <span className="badge-new">الاشتراكات</span>
+          <h2>اختر باقتك و <span className="accent">انطلق نحو النجاح</span></h2>
+          <p className="hero-desc">خطط مرنة تناسب طموحك وجدولك الزمني.</p>
         </div>
 
-      </Link>
+        <div className="pricing-grid">
+          {premiumPlans.map((plan, i) => (
+            <div 
+              className={`feature-card-premium reveal-anim ${plan.highlight ? 'highlight-plan' : ''}`} 
+              key={i}
+              style={{
+                background: plan.highlight ? 'var(--bg-darker)' : 'var(--bg-card)',
+                borderColor: plan.highlight ? 'var(--primary)' : 'var(--glass-border)',
+                animationDelay: `${i * 0.15}s`
+              }}
+            >
+              <div className="feature-icon-wrapper" style={{ 
+                color: plan.highlight ? 'var(--secondary)' : 'var(--primary)',
+                background: plan.highlight ? 'var(--secondary-glow)' : 'var(--bg-accent)'
+              }}>
+                {plan.icon}
+              </div>
+              
+              <h3 style={{ fontSize: '24px', fontWeight: 800, marginBottom: '8px' }}>{plan.name}</h3>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '24px' }}>
+                <span style={{ fontSize: '42px', fontWeight: 900 }}>{plan.price}</span>
+                <span style={{ color: 'var(--text-gray)', fontSize: '18px' }}>د.ت {plan.period}</span>
+              </div>
 
-    </div>
+              <ul style={{ listStyle: 'none', padding: 0, marginBottom: '40px' }}>
+                {plan.features.map((f, fi) => (
+                  <li key={fi} style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', color: 'var(--text-gray)', fontSize: '15px' }}>
+                    <Check size={18} color="var(--primary)" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+
+              <Link to="/subscriptions" style={{ textDecoration: 'none' }}>
+                <button className={plan.highlight ? 'btn-premium' : 'signup-button'} style={{ width: '100%' }}>
+                  {plan.cta}
+                </button>
+              </Link>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 };
 

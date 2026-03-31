@@ -1,25 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Navbar from '../comp/navbar';
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
+import { Lock, Play, CheckCircle, Trophy, ArrowLeft } from 'lucide-react';
 
-// دالة مساعدة لتجزئة الباراميتر
 const parseCategoryParam = (param) => {
     if (!param) return { category1: '', category2: '' };
-
-    // Check if it contains a separator
-    if (!param.includes(' / ')) {
-        return { category1: param.trim(), category2: '' };
-    }
-
+    if (!param.includes(' / ')) return { category1: param.trim(), category2: '' };
     const parts = param.split(' / ').map(p => p.trim());
-
-    let category1 = '';
-    let category2 = '';
-
+    let category1 = '', category2 = '';
     if (parts.length >= 3) {
-        // حالة: A / A1 / العلامات
         category1 = parts.slice(0, 2).join(' / ');
         category2 = parts.slice(2).join(' / ');
     } else if (parts.length === 2) {
@@ -31,7 +22,7 @@ const parseCategoryParam = (param) => {
     return { category1, category2 };
 };
 
-// مكون البطاقة لتسهيل حالة الـ checkmark
+// ===== كارد السلسلة =====
 function SerieCard({ serieNum, isLocked, categoryParam, isLoggedIn }) {
     const [isChecked, setIsChecked] = useState(() => {
         const saved = localStorage.getItem(`checked_serie_${categoryParam}_${serieNum}`);
@@ -48,47 +39,140 @@ function SerieCard({ serieNum, isLocked, categoryParam, isLoggedIn }) {
 
     return (
         <Link
-            key={serieNum}
             to={!isLocked ? `/serie?category=${encodeURIComponent(categoryParam)}&nb_serie=${serieNum}` : '#'}
-            className={`card-link ${isChecked ? 'card-checked' : ''}`}
-            style={isLocked ? { cursor: 'not-allowed', opacity: 0.7 } : {}}
+            className={`premium-card reveal-anim ${isLocked ? 'disabled' : ''}`}
             onClick={(e) => {
-                if (isLocked && isLoggedIn) {
+                if (isLocked) {
                     e.preventDefault();
                     alert("هذه السلسلة متاحة للمشتركين فقط. يرجى الاشتراك لفتح جميع السلاسل.");
                 }
             }}
         >
-            <div
-                className={`checkmark-btn ${isChecked ? 'checked' : ''}`}
-                onClick={toggleCheck}
-                title="حدد كمكتمل"
-            >
-                <span className="checkmark-icon">{isChecked ? '✓' : '✓'}</span>
-            </div>
-            <div className="license-card" style={{ justifyContent: 'center', height: '180px' }}>
-                <div className="card-info" style={{ alignItems: 'center' }}>
-                    <h3 className="card-category" style={{ fontSize: '2em', marginBottom: '10px' }}>
-                        السلسلة {serieNum}
-                    </h3>
-                    {isLocked ? (
-                        <span style={{ fontSize: '1.5em' }}>🔒</span>
-                    ) : (
-                        <span style={{ color: 'var(--success-color)', fontWeight: 'bold' }}></span>
-                    )}
+            {isLocked && (
+                <div className="overlay-premium">
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                        <Lock size={32} color="var(--primary)" />
+                        <p style={{ fontSize: '14px' }}>محتوى VIP</p>
+                    </div>
+                </div>
+            )}
+            
+            <div className="card-body-premium" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', minHeight: '220px', justifyContent: 'center' }}>
+                <div style={{ width: '60px', height: '60px', background: 'var(--bg-accent)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', marginBottom: '20px' }}>
+                    <Play size={24} fill="currentColor" />
+                </div>
+                <h3 className="card-title-premium" style={{ fontSize: '28px', marginBottom: '8px' }}>السلسلة {serieNum}</h3>
+                <p style={{ color: 'var(--text-gray)', fontSize: '14px' }}>انقر للبدء في دراسة هذه السلسلة</p>
+                
+                <div 
+                    onClick={toggleCheck}
+                    style={{ position: 'absolute', top: '20px', left: '20px', cursor: 'pointer', color: isChecked ? '#10b981' : 'var(--glass-border)' }}
+                >
+                    <CheckCircle size={24} fill={isChecked ? 'rgba(16, 185, 129, 0.2)' : 'none'} />
                 </div>
             </div>
         </Link>
     );
 }
 
+// ===== كارد الاختبار الشامل للموضوع =====
+function TopicExamCard({ category1, category2, isSubscribed, isLoggedIn }) {
+    const navigate = useNavigate();
+
+    // بناء رابط الاختبار:
+    // للفئة B: /full-exam?category=B (كل الأسئلة)
+    // لغيرها: /Examen?category=X / Y&nb_serie=... لكن هنا نريد اختبار الموضوع الفرعي كاملاً
+    // نستخدم examen_series للموضوع الفرعي
+    const encodedCategory = category2
+        ? `${encodeURIComponent(category1)} / ${encodeURIComponent(category2)}`
+        : encodeURIComponent(category1);
+
+    // توجيه إلى نافذة الـ 24 اختبار
+    const examLink = `/exams-list?category=${encodedCategory}`;
+
+    const isLocked = !isLoggedIn;
+
+    return (
+        <Link
+            to={!isLocked ? examLink : '#'}
+            className="premium-card reveal-anim exam-card-special"
+            onClick={(e) => {
+                if (isLocked) {
+                    e.preventDefault();
+                    alert("سجّل الدخول لبدء الاختبار.");
+                }
+            }}
+        >
+            {/* خلفية متوهجة */}
+            <div style={{
+                position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.12), rgba(59, 130, 246, 0.08))',
+                zIndex: 0
+            }}></div>
+
+            {isLocked && (
+                <div className="overlay-premium">
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                        <Lock size={32} color="var(--primary)" />
+                        <p style={{ fontSize: '14px' }}>سجّل الدخول أولاً</p>
+                    </div>
+                </div>
+            )}
+
+            <div className="card-body-premium" style={{
+                position: 'relative', zIndex: 1,
+                display: 'flex', flexDirection: 'column', alignItems: 'center',
+                textAlign: 'center', minHeight: '220px', justifyContent: 'center', gap: '16px'
+            }}>
+                <div style={{
+                    width: '64px', height: '64px',
+                    background: 'linear-gradient(135deg, var(--primary), var(--secondary))',
+                    borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: 'white', boxShadow: '0 10px 25px -5px var(--secondary-glow)'
+                }}>
+                    <Trophy size={28} />
+                </div>
+
+                <div>
+                    <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--secondary)', textTransform: 'uppercase', letterSpacing: '1.5px', display: 'block', marginBottom: '8px' }}>
+                        اختبار الموضوع
+                    </span>
+                    <h3 className="card-title-premium" style={{ fontSize: '24px', marginBottom: '8px' }}>
+                        اختبر مستواك 🏆
+                    </h3>
+                    <p style={{ color: 'var(--text-gray)', fontSize: '14px', lineHeight: '1.6', maxWidth: '260px' }}>
+                        خض اختبار تقييمي شامل لجميع سلاسل هذا الموضوع
+                    </p>
+                </div>
+
+                {!isSubscribed && (
+                    <div style={{
+                        background: 'rgba(139, 92, 246, 0.1)', border: '1px solid rgba(139, 92, 246, 0.25)',
+                        borderRadius: '10px', padding: '8px 16px', fontSize: '12px', color: 'var(--secondary)', fontWeight: 700
+                    }}>
+                        ⚡ أول 5 أسئلة مجانية
+                    </div>
+                )}
+
+                <div className="card-nav-btn" style={{
+                    background: 'linear-gradient(135deg, var(--primary), var(--secondary))',
+                    color: 'white', borderColor: 'transparent',
+                    boxShadow: '0 8px 20px -5px var(--primary-glow)'
+                }}>
+                    <ArrowLeft size={18} />
+                </div>
+            </div>
+        </Link>
+    );
+}
+
+// ===== الصفحة الرئيسية =====
 export default function CoursSeries() {
     const location = useLocation();
     const [series, setSeries] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
-    // استخراج الباراميترات من URL
     const urlParams = new URLSearchParams(location.search);
     const categoryParam = urlParams.get('category');
     const { category1, category2 } = parseCategoryParam(categoryParam);
@@ -103,69 +187,70 @@ export default function CoursSeries() {
                 setLoading(false);
                 return;
             }
-
             try {
-                // استدعاء الـ API لجلب السلاسل (نفس API الامتحانات)
                 const response = await axios.get(`${API_BASE_URL}/quiz/series`, {
                     params: { category1, category2 }
                 });
                 setSeries(response.data);
             } catch (err) {
                 console.error("Error fetching series:", err);
-                setError('فشل في جلب السلاسل. يرجى المحاولة لاحقاً.');
+                setError('فشل في جلب السلاسل.');
             } finally {
                 setLoading(false);
             }
         };
-
         fetchSeries();
     }, [category1, category2]);
 
     return (
-        <>
+        <div style={{ background: 'var(--bg-deep)', minHeight: '100vh' }}>
             <Navbar />
-
-            <div className="subscriptions-container">
-                <header className="payment-header">
-                    <h1>سلاسل الدروس: {category2}</h1>
-                    <p style={{ marginTop: '10px' }}> الفئة : ( {category1} )</p>
+            <div className="page-container">
+                <header className="page-header reveal-anim">
+                    <span className="badge-new">{category1} {category2 && `- ${category2}`}</span>
+                    <h1 className="page-title">اختيار <span className="accent">السلسلة</span></h1>
+                    <p className="hero-desc">المواضيع مقسمة إلى سلاسل، كل سلسلة تحتوي على مجموعة من الدروس المركزة لتسهيل عملية المراجعة.</p>
                 </header>
 
-                {loading && (
-                    <div style={{ textAlign: 'center', padding: '50px' }}>
-                        <h2>جاري التحميل... 🔄</h2>
-                    </div>
+                {loading ? (
+                    <div style={{ textAlign: 'center', padding: '100px', color: 'var(--primary)', fontWeight: 800 }}>جاري التحميل...</div>
+                ) : error ? (
+                    <div style={{ textAlign: 'center', padding: '100px', color: '#f43f5e' }}>{error}</div>
+                ) : (
+                    <>
+                        {/* سلاسل الدروس */}
+                        <div className="cards-grid">
+                            {series.map((serieNum) => (
+                                <SerieCard
+                                    key={serieNum}
+                                    serieNum={serieNum}
+                                    isLocked={!isSubscribed && serieNum > 1}
+                                    categoryParam={categoryParam}
+                                    isLoggedIn={isLoggedIn}
+                                />
+                            ))}
+                        </div>
+
+                        {/* --- فاصل وكارد الاختبار --- */}
+                        {category1 !== 'B' && (
+                            <div style={{ marginTop: '60px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '28px', direction: 'rtl' }}>
+                                    <div style={{ width: '4px', height: '28px', background: 'var(--secondary)', borderRadius: '4px' }}></div>
+                                    <h2 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-white)' }}>اختبر مستواك في هذا الموضوع</h2>
+                                </div>
+                                <div className="cards-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))' }}>
+                                    <TopicExamCard
+                                        category1={category1}
+                                        category2={category2}
+                                        isSubscribed={isSubscribed}
+                                        isLoggedIn={isLoggedIn}
+                                    />
+                                </div>
+                            </div>
+                        )}
+                    </>
                 )}
-
-                {error && (
-                    <div style={{ textAlign: 'center', padding: '50px', color: 'red' }}>
-                        <h2>{error}</h2>
-                    </div>
-                )}
-
-                {!loading && !error && series.length === 0 && (
-                    <div style={{ textAlign: 'center', padding: '50px' }}>
-                        <h2>لا توجد سلاسل متاحة لهذه الفئة حالياً.</h2>
-                    </div>
-                )}
-
-                <div className="cards-grid-container">
-                    {series.map((serieNum) => {
-                        // منطق الحجب: السلسلة 1 مفتوحة، الباقي للمشتركين فقط
-                        const isLocked = !isSubscribed && serieNum > 1;
-
-                        return (
-                            <SerieCard
-                                key={serieNum}
-                                serieNum={serieNum}
-                                isLocked={isLocked}
-                                categoryParam={categoryParam}
-                                isLoggedIn={isLoggedIn}
-                            />
-                        );
-                    })}
-                </div>
             </div>
-        </>
+        </div>
     );
 }

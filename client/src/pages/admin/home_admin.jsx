@@ -41,6 +41,20 @@ export default function Home_admin() {
             Go to Admin Panel (New)
           </button>
         </Link>
+        <Link to="/admin/move-series">
+          <button style={{
+            padding: '10px 20px',
+            fontSize: '16px',
+            backgroundColor: '#fd7e14',
+            color: 'white',
+            border: 'none',
+            borderRadius: '5px',
+            cursor: 'pointer',
+            marginLeft: '10px'
+          }}>
+             📦 نقل سلسلة (Move Series)
+          </button>
+        </Link>
       </div>
       <QuestionForm />
       <Organiz_admin />

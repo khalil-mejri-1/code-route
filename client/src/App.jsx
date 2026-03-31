@@ -11,6 +11,7 @@ import Cours_question from "./pages/cours_question.jsx"; // Import the new modal
 import CoursSeries from "./pages/cours_series.jsx"; // ⭐️ New Component
 import Examen_question from "./pages/examen_question.jsx"; // Import the new modal component
 import ExamenSeries from './pages/examen_series'; // ⭐️ New Component
+import ExamsList from './pages/exams_list'; // ⭐️ New Component
 import Contact from "./pages/contact.jsx"; // Import the new modal component
 import Subscriptions from "./pages/subscriptions.jsx"; // Import the new modal component
 import Serie from "./pages/serie.jsx"; // Import the new modal component
@@ -18,7 +19,9 @@ import Examen_test from "./pages/examen_test.jsx"; // Import the new modal compo
 import Home_admin from "./pages/admin/home_admin.jsx"; // Import the new modal component
 import Admin2 from "./pages/admin/Admin2.jsx"; // Import the Admin2 component
 import AdminPanel from "./pages/admin/AdminPanel.jsx"; // Import the AdminPanel component
+import MoveSeries from "./pages/admin/MoveSeries.jsx"; // ⭐️ New Component
 import GlobalBackButton from "./comp/GlobalBackButton"; // ⭐️ New Component
+import FullExam from "./pages/full_exam.jsx"; // ⭐️ Comprehensive Exam Page
 
 const MODAL_CLOSED_KEY = "welcomeModalClosed";
 
@@ -63,6 +66,7 @@ const App = () => {
           <Route path="/cours/question" element={<Cours_question />} />
           <Route path="/cours/series" element={<CoursSeries />} /> {/* ⭐️ New Route */}
           <Route path="/Cours_question" element={<Cours_question />} /> {/* ⭐️ Legacy Support */}
+          <Route path="/exams-list" element={<ExamsList />} /> {/* ⭐️ New Exams List Window */}
           <Route path="/examen/question" element={<Examen_question />} />
           <Route path="/examen_question" element={<Examen_question />} /> {/* ⭐️ Legacy Support */}
           <Route path="/examen/series" element={<ExamenSeries />} /> {/* ⭐️ New Route */}
@@ -73,6 +77,9 @@ const App = () => {
           <Route path="/admin" element={<Home_admin />} />
           <Route path="/admin2" element={<Admin2 />} />
           <Route path="/admin-panel" element={<AdminPanel />} />
+          <Route path="/admin/move-series" element={<MoveSeries />} />
+          <Route path="/full-exam" element={<FullExam />} />
+          <Route path="/examen/question" element={<Examen_question />} />
 
           {/* Catch-all route for any other path */}
           <Route path="/*" element={<Home />} />
