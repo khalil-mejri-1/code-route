@@ -57,8 +57,8 @@ export default function Serie() {
     const [selectedIndices, setSelectedIndices] = useState([]);
     const [isDeleting, setIsDeleting] = useState(false);
 
-    const [editInputText, setEditInputText] = useState('');
-    const [editOutputText, setEditOutputText] = useState('');
+    const [editQuestion, setEditQuestion] = useState('');
+    const [editOptions, setEditOptions] = useState(['', '', '']);
     const [editImageFile, setEditImageFile] = useState(null);
     const [editPreviewUrl, setEditPreviewUrl] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
@@ -187,24 +187,24 @@ export default function Serie() {
     };
 
     const handleSaveEdit = async () => {
-        const lines = editOutputText.split('\n').map(l => l.trim()).filter(l => l);
-        if (lines.length < 2) return alert('برجاء تزويد السؤال وإجابة واحدة على الأقل.');
+        if (!editQuestion.trim() || editOptions.some(o => !o.trim())) {
+            return alert('برجاء تزويد السؤال وجميع الخيارات.');
+        }
 
         setIsSaving(true);
         try {
             let imageUrl = currentQuestion.image;
             if (editImageFile) imageUrl = await uploadToImgBB(editImageFile);
-            const questionText = lines[0];
-            const options = lines.slice(1).map((text, idx) => ({ text, isCorrect: idx === 0 }));
+            const options = editOptions.map((text, idx) => ({ text, isCorrect: idx === 0 }));
 
             await axios.put(`${API_BASE_URL}/questions/${currentQuestion._id}`, {
-                question: questionText,
+                question: editQuestion,
                 options: options,
                 image: imageUrl
             });
 
             const updatedData = [...quizData];
-            updatedData[currentQuestionIndex] = { ...currentQuestion, question: questionText, options: options, image: imageUrl };
+            updatedData[currentQuestionIndex] = { ...currentQuestion, question: editQuestion, options: options, image: imageUrl };
             setQuizData(updatedData);
             setShowEditModal(false);
             alert('✅ تم التحديث بنجاح!');
@@ -214,6 +214,14 @@ export default function Serie() {
         } finally {
             setIsSaving(false);
         }
+    };
+
+    const openEditModal = () => {
+        setEditQuestion(currentQuestion.question);
+        setEditOptions(currentQuestion.options.map(o => o.text));
+        setEditImageFile(null);
+        setEditPreviewUrl(currentQuestion.image);
+        setShowEditModal(true);
     };
 
     if (loading) {
@@ -253,38 +261,64 @@ export default function Serie() {
 
             {showEditModal && (
                 <div className="overlay-premium" style={{ opacity: 1, zIndex: 2000, overflowY: 'auto', padding: '20px' }}>
-                    <div className="reveal-anim" style={{ background: 'white', width: '90%', maxWidth: '800px', border: '1px solid #3b5998', borderRadius: '12px', padding: '50px', position: 'relative' }}>
-                        <button style={{ position: 'absolute', top: '30px', left: '30px', background: 'none', border: 'none', color: '#3b5998' }} onClick={() => setShowEditModal(false)}>
+                    <div className="reveal-anim" style={{ background: 'white', width: '90%', maxWidth: '800px', border: '1px solid #3b5998', borderRadius: '12px', padding: '40px', position: 'relative' }}>
+                        <button style={{ position: 'absolute', top: '20px', left: '20px', background: 'none', border: 'none', color: '#3b5998', cursor: 'pointer' }} onClick={() => setShowEditModal(false)}>
                             <X size={32} />
                         </button>
-                        <h2 style={{ fontSize: '32px', marginBottom: '40px', color: '#3b5998' }}>🛠️ تعديل الدرس</h2>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-                            <div>
-                                <label style={{ display: 'block', marginBottom: '12px', fontWeight: 700, color: '#3b5998' }}>محتوى الدرس (السؤال ثم الإجابة الصحيحة ثم الخاطئة)</label>
-                                <textarea
-                                    value={editOutputText}
-                                    onChange={(e) => setEditOutputText(e.target.value)}
-                                    rows="8"
-                                    style={{ width: '100%', background: '#f5f5f5', border: '1px solid #ccc', color: 'black', borderRadius: '12px', padding: '20px', fontSize: '16px', outline: 'none' }}
-                                />
+                        <h2 style={{ fontSize: '28px', marginBottom: '30px', color: '#3b5998', textAlign: 'center' }}>🛠️ تعديل محتوى السؤال</h2>
+                        
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                            <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
+                                <div style={{ flex: 1 }}>
+                                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: 700, color: '#3b5998' }}>السؤال</label>
+                                    <textarea 
+                                        value={editQuestion} 
+                                        onChange={(e) => setEditQuestion(e.target.value)}
+                                        rows="3"
+                                        style={{ width: '100%', border: '1px solid #ccc', borderRadius: '8px', padding: '12px', fontSize: '16px' }}
+                                    />
+                                </div>
+                                <div style={{ width: '200px' }}>
+                                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: 700, color: '#3b5998' }}>الصورة الحالية</label>
+                                    <div style={{ width: '100%', height: '120px', border: '1px solid #eee', borderRadius: '8px', overflow: 'hidden', background: '#f9f9f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        {editPreviewUrl ? <img src={editPreviewUrl} alt="Preview" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} /> : <span>لا توجد صورة</span>}
+                                    </div>
+                                    <label style={{ display: 'block', marginTop: '10px', fontSize: '12px', color: '#3b5998', cursor: 'pointer', textDecoration: 'underline' }}>
+                                        تغيير الصورة
+                                        <input type="file" hidden onChange={(e) => {
+                                            const file = e.target.files[0];
+                                            if (file) {
+                                                setEditImageFile(file);
+                                                setEditPreviewUrl(URL.createObjectURL(file));
+                                            }
+                                        }} />
+                                    </label>
+                                </div>
                             </div>
 
                             <div>
-                                <label style={{ display: 'block', marginBottom: '12px', fontWeight: 700, color: '#3b5998' }}>تعديل الصورة</label>
-                                <label style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '15px', padding: '15px', border: '1px dashed #3b5998', borderRadius: '12px' }}>
-                                    <UploadCloud size={24} color="#3b5998" />
-                                    <span>{editImageFile ? editImageFile.name : 'اختر صورة جديدة...'}</span>
-                                    <input type="file" hidden onChange={(e) => {
-                                        if (e.target.files?.[0]) {
-                                            setEditImageFile(e.target.files[0]);
-                                            setEditPreviewUrl(URL.createObjectURL(e.target.files[0]));
-                                        }
-                                    }} />
-                                </label>
+                                <label style={{ display: 'block', marginBottom: '12px', fontWeight: 700, color: '#3b5998' }}>الخيارات (الخيار الأول هو الصحيح)</label>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    {editOptions.map((opt, i) => (
+                                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                            <span style={{ minWidth: '30px', fontWeight: 'bold', color: i === 0 ? '#10b981' : '#f43f5e' }}>{['أ', 'ب', 'ج'][i]}</span>
+                                            <input 
+                                                type="text"
+                                                value={opt}
+                                                onChange={(e) => {
+                                                    const newOpts = [...editOptions];
+                                                    newOpts[i] = e.target.value;
+                                                    setEditOptions(newOpts);
+                                                }}
+                                                style={{ flex: 1, padding: '10px', border: '1px solid #ccc', borderRadius: '8px', borderRight: i === 0 ? '4px solid #10b981' : '4px solid #f43f5e' }}
+                                                placeholder={i === 0 ? 'الإجابة الصحيحة...' : 'إجابة خاطئة...'}
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
 
-                            <button className="btn-classic" onClick={handleSaveEdit} disabled={isSaving} style={{ background: '#3b5998', color: 'white', padding: '15px' }}>
+                            <button className="btn-classic" onClick={handleSaveEdit} disabled={isSaving} style={{ background: '#3b5998', color: 'white', padding: '15px', marginTop: '10px', fontSize: '18px' }}>
                                 {isSaving ? 'جاري الحفظ...' : 'حفظ التغييرات ✅'}
                             </button>
                         </div>
@@ -336,7 +370,12 @@ export default function Serie() {
                         <div className="classic-metadata">
                             <p className="category-label">{currentTopic}</p>
                             <p>Serie {new URLSearchParams(location.search).get('nb_serie') || '1'}</p>
-                            <button onClick={() => setShowEditModal(true)} style={{ background: 'none', border: 'none', color: '#3b5998', marginTop: '10px', textDecoration: 'underline', cursor: 'pointer' }}>تعديل</button>
+                            <button 
+                                onClick={openEditModal} 
+                                className="btn-edit-classic"
+                            >
+                                تعديل السؤال
+                            </button>
                         </div>
                     </div>
                 </div>
