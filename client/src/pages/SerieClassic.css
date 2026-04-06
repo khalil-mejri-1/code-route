@@ -354,4 +354,24 @@
     min-width: 100px;
     padding: 10px;
   }
+
+  .classic-edit-row {
+    flex-direction: column !important;
+    gap: 15px !important;
+  }
+
+  .classic-edit-row > div {
+    width: 100% !important;
+  }
+
+  .reveal-anim[style*="width: 90%"] {
+    width: 95% !important;
+    padding: 20px !important;
+  }
+}
+
+.classic-edit-row {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
 }

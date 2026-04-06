@@ -45,6 +45,13 @@ export default function FullExam() {
     const [quizData, setQuizData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+    const [selectedAnswer, setSelectedAnswer] = useState(null);
+    const [showAnswer, setShowAnswer] = useState(false);
+    const [userAnswersHistory, setUserAnswersHistory] = useState([]);
+    const [imageLoading, setImageLoading] = useState(true);
+    const [showEditModal, setShowEditModal] = useState(false);
+
     const [editQuestion, setEditQuestion] = useState('');
     const [editOptions, setEditOptions] = useState(['', '', '']);
     const [editImageFile, setEditImageFile] = useState(null);
@@ -97,6 +104,31 @@ export default function FullExam() {
         };
         fetchQuestions();
     }, [category1, category2, examSerieParam]);
+
+    useEffect(() => {
+        if (quizData.length > 0) {
+            quizData.forEach(q => {
+                if (q.image) {
+                    const img = new Image();
+                    img.src = q.image;
+                }
+            });
+        }
+    }, [quizData]);
+
+    useEffect(() => {
+        if (currentQuestion) {
+            const img = new Image();
+            img.src = currentQuestion.image;
+            if (img.complete) {
+                setImageLoading(false);
+            } else {
+                setImageLoading(true);
+                const timer = setTimeout(() => setImageLoading(false), 2000);
+                return () => clearTimeout(timer);
+            }
+        }
+    }, [currentQuestionIndex]);
 
     const totalQuestions = quizData.length;
     const visibleCount = isSubscribed ? totalQuestions : Math.min(totalQuestions, FREE_TRIAL_LIMIT);
@@ -178,6 +210,7 @@ export default function FullExam() {
         if (idx < 0 || idx >= totalQuestions) return;
         if (!isSubscribed && idx >= FREE_TRIAL_LIMIT) return;
         setCurrentQuestionIndex(idx);
+        setImageLoading(true);
         const status = userAnswersHistory[idx];
         if (status !== null) {
             const correctIdx = quizData[idx].options.findIndex(o => o.isCorrect);
@@ -227,14 +260,14 @@ export default function FullExam() {
 
             {showEditModal && (
                 <div className="overlay-premium" style={{ opacity: 1, zIndex: 2000, overflowY: 'auto', padding: '20px' }}>
-                    <div className="reveal-anim" style={{ background: 'white', width: '90%', maxWidth: '800px', border: '1px solid #3b5998', borderRadius: '12px', padding: '40px', position: 'relative' }}>
-                        <button style={{ position: 'absolute', top: '20px', left: '20px', background: 'none', border: 'none', color: '#3b5998', cursor: 'pointer' }} onClick={() => setShowEditModal(false)}>
-                            <X size={32} />
+                    <div className="reveal-anim" style={{ background: 'white', width: '90%', maxWidth: '800px', border: '1px solid #3b5998', borderRadius: '12px', padding: '25px', position: 'relative' }}>
+                        <button style={{ position: 'absolute', top: '15px', left: '15px', background: 'none', border: 'none', color: '#3b5998', cursor: 'pointer' }} onClick={() => setShowEditModal(false)}>
+                            <X size={28} />
                         </button>
-                        <h2 style={{ fontSize: '28px', marginBottom: '30px', color: '#3b5998', textAlign: 'center' }}>🛠️ تعديل محتوى السؤال</h2>
+                        <h2 style={{ fontSize: '22px', marginBottom: '25px', color: '#3b5998', textAlign: 'center' }}>🛠️ تعديل محتوى السؤال</h2>
                         
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                            <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
+                            <div className="classic-edit-row">
                                 <div style={{ flex: 1 }}>
                                     <label style={{ display: 'block', marginBottom: '8px', fontWeight: 700, color: '#3b5998' }}>السؤال</label>
                                     <textarea 
@@ -326,7 +359,22 @@ export default function FullExam() {
                             </div>
                         ) : (
                             <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', justifyContent: 'center' }}>
-                                <img src={currentQuestion.image} alt="Exam" />
+                                {imageLoading && (
+                                    <div style={{ 
+                                        position: 'absolute', 
+                                        top: 0, left: 0, right: 0, bottom: 0, 
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                                        background: '#f9f9f9', zIndex: 10, fontSize: '18px', color: '#3b5998' 
+                                    }}>
+                                        جاري تحميل الصورة...
+                                    </div>
+                                )}
+                                <img 
+                                    key={currentQuestion.image}
+                                    src={currentQuestion.image} 
+                                    onLoad={() => setImageLoading(false)} 
+                                    alt="Exam" 
+                                />
                             </div>
                         )}
                     </div>
@@ -339,7 +387,9 @@ export default function FullExam() {
                             {selectedLetter}
                         </div>
                         <div className="classic-metadata">
-                            <p className="category-label">{category2 || 'اختبار شامل'}</p>
+                            <p className="category-label" style={{ background: '#3b5998', color: 'white', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', marginBottom: '5px' }}>
+                                فئة السؤال: {currentQuestion?.category1} {currentQuestion?.category2 ? `(${currentQuestion.category2})` : ''}
+                            </p>
                             <p style={{ color: '#10b981', fontWeight: 'bold' }}>الصح: {correctCount}</p>
                             <button 
                                 onClick={openEditModal} 

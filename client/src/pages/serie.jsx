@@ -111,6 +111,30 @@ export default function Serie() {
         fetchQuestions();
     }, [location.search]);
 
+    useEffect(() => {
+        if (quizData.length > 0) {
+            quizData.forEach(q => {
+                const img = new Image();
+                img.src = q.image;
+            });
+        }
+    }, [quizData]);
+
+    useEffect(() => {
+        if (currentQuestion) {
+            const img = new Image();
+            img.src = currentQuestion.image;
+            if (img.complete) {
+                setImageLoading(false);
+            } else {
+                setImageLoading(true);
+                // Fallback: don't stay stuck forever
+                const timer = setTimeout(() => setImageLoading(false), 2000);
+                return () => clearTimeout(timer);
+            }
+        }
+    }, [currentQuestionIndex]);
+
     const handleNext = () => {
         if (currentQuestionIndex < visibleLessonCount - 1) {
             setImageLoading(true);
@@ -261,14 +285,14 @@ export default function Serie() {
 
             {showEditModal && (
                 <div className="overlay-premium" style={{ opacity: 1, zIndex: 2000, overflowY: 'auto', padding: '20px' }}>
-                    <div className="reveal-anim" style={{ background: 'white', width: '90%', maxWidth: '800px', border: '1px solid #3b5998', borderRadius: '12px', padding: '40px', position: 'relative' }}>
-                        <button style={{ position: 'absolute', top: '20px', left: '20px', background: 'none', border: 'none', color: '#3b5998', cursor: 'pointer' }} onClick={() => setShowEditModal(false)}>
-                            <X size={32} />
+                    <div className="reveal-anim" style={{ background: 'white', width: '90%', maxWidth: '800px', border: '1px solid #3b5998', borderRadius: '12px', padding: '25px', position: 'relative' }}>
+                        <button style={{ position: 'absolute', top: '15px', left: '15px', background: 'none', border: 'none', color: '#3b5998', cursor: 'pointer' }} onClick={() => setShowEditModal(false)}>
+                            <X size={28} />
                         </button>
-                        <h2 style={{ fontSize: '28px', marginBottom: '30px', color: '#3b5998', textAlign: 'center' }}>🛠️ تعديل محتوى السؤال</h2>
+                        <h2 style={{ fontSize: '22px', marginBottom: '25px', color: '#3b5998', textAlign: 'center' }}>🛠️ تعديل محتوى السؤال</h2>
                         
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                            <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
+                            <div className="classic-edit-row">
                                 <div style={{ flex: 1 }}>
                                     <label style={{ display: 'block', marginBottom: '8px', fontWeight: 700, color: '#3b5998' }}>السؤال</label>
                                     <textarea 
@@ -354,8 +378,22 @@ export default function Serie() {
                             </div>
                         ) : (
                             <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', justifyContent: 'center' }}>
-                                <img src={currentQuestion.image} alt="Question" onLoad={() => setImageLoading(false)} />
-                                {imageLoading && <div style={{ position: 'absolute', inset: 0, background: '#f5f5f5', color: '#315494', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>جاري تحميل الصورة...</div>}
+                                {imageLoading && (
+                                    <div style={{ 
+                                        position: 'absolute', 
+                                        top: 0, left: 0, right: 0, bottom: 0, 
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                                        background: '#f9f9f9', zIndex: 10, fontSize: '18px', color: '#3b5998' 
+                                    }}>
+                                        جاري تحميل الصورة...
+                                    </div>
+                                )}
+                                <img 
+                                    key={currentQuestion.image}
+                                    src={currentQuestion.image} 
+                                    onLoad={() => setImageLoading(false)} 
+                                    alt="Lesson" 
+                                />
                             </div>
                         )}
                     </div>
