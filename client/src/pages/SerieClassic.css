@@ -1,0 +1,252 @@
+.serie-classic-wrapper {
+  background: #ffffff;
+  min-height: 100vh;
+  color: #000;
+  direction: rtl;
+  font-family: Arial, sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+.classic-top-bar {
+  background: #ffffff;
+  color: #3b5998;
+  padding: 10px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  border-bottom: 2px solid #3b5998;
+  font-weight: bold;
+}
+
+.classic-main-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.classic-blue-section {
+  background: #ffffff; /* User requested white */
+  padding: 20px;
+  display: grid;
+  grid-template-columns: 220px 1fr 220px;
+  gap: 20px;
+  min-height: 450px;
+  border-bottom: 2px solid #ccc;
+}
+
+/* Left Sidebar - Answer Display */
+.classic-answer-sidebar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #3b5998;
+  text-align: center;
+  border: 1px solid #eee;
+  padding: 20px;
+  background: #fdfdfd;
+}
+
+.classic-answer-sidebar h4 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.classic-answer-box {
+  background: white;
+  color: black;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  font-weight: bold;
+  margin: 15px 0;
+  border: 4px solid #3b5998;
+  box-shadow: inset 2px 2px 5px rgba(0,0,0,0.2);
+}
+
+.classic-metadata {
+  margin-top: 20px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.classic-metadata .category-label {
+  color: #d32f2f;
+  font-weight: bold;
+}
+
+/* Middle Section - Image */
+.classic-image-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.classic-image-container img {
+  max-width: 100%;
+  max-height: 380px;
+  border: 5px solid #000;
+  /* Mask to create oval effect if needed, but the image shows a black border around an oval content */
+  /* For now we stick to a solid border as the image itself might be oval */
+}
+
+/* Right Sidebar - Numbers */
+.classic-numbers-sidebar {
+  background: white;
+  border: 2px solid #3b5998;
+  display: flex;
+  flex-direction: column;
+}
+
+.classic-numbers-header {
+  background: #3b5998;
+  color: white;
+  text-align: center;
+  padding: 5px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.classic-numbers-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  overflow-y: auto;
+  max-height: 350px;
+  font-size: 12px;
+}
+
+.classic-number-row {
+  padding: 2px 10px;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+}
+
+.classic-number-row.active {
+  background: #3b5998;
+  color: white;
+}
+
+.classic-number-row:hover:not(.active) {
+  background: #f0f0f0;
+}
+
+/* Bottom Section - Question & Options */
+.classic-bottom-section {
+  background: white;
+  padding: 30px 20px;
+  display: grid;
+  grid-template-columns: 220px 1fr 220px; /* Matching the top section grid */
+  gap: 20px;
+  position: relative;
+  flex: 1;
+}
+
+.classic-question-area {
+  grid-column: 2; /* Middle column matching image area */
+  display: flex;
+  flex-direction: column;
+}
+
+.classic-question-text {
+  color: #d32f2f;
+  font-size: 24px;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.classic-options-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.classic-option-item {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  cursor: pointer;
+}
+
+.classic-option-box {
+  width: 35px;
+  height: 35px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: black;
+  font-weight: bold;
+  font-size: 18px;
+  border: 1px solid #000;
+}
+
+.classic-option-text {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+/* Color codes */
+.option-a { background: #ff5252; }
+.option-b { background: #ffd740; }
+.option-c { background: #69f0ae; }
+
+.classic-controls-wrapper {
+  grid-column: 1 / span 3; /* Span entire grid width */
+  margin-top: auto;
+  padding: 20px 0;
+}
+
+.btn-classic-back {
+  background: #f5f5f5;
+  border: 1px solid #ccc;
+  padding: 4px 12px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  color: #3b5998;
+}
+
+.btn-classic-back:hover {
+  background: #eee;
+  border-color: #3b5998;
+}
+
+.classic-controls {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.btn-classic {
+  background: #e0e0e0;
+  border: 2px solid #9e9e9e;
+  padding: 5px 20px;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 2px 2px 0px #000;
+}
+
+.btn-classic:active {
+  box-shadow: none;
+  transform: translate(2px, 2px);
+}
+
+@media (max-width: 1024px) {
+  .classic-blue-section {
+    grid-template-columns: 1fr;
+  }
+  .classic-answer-sidebar, .classic-numbers-sidebar {
+    display: none;
+  }
+}

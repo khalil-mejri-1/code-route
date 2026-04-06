@@ -3,22 +3,22 @@ import Navbar from '../comp/navbar';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { API_BASE_URL, IMGBB_API_KEY, IMGBB_UPLOAD_URL } from '../config';
-import { 
-  ChevronRight, 
-  ChevronLeft, 
-  CheckCircle, 
-  XCircle, 
-  Lock, 
-  Trash2, 
-  Edit3, 
-  Trophy,
-  ArrowRight,
-  FileText,
-  UploadCloud,
-  Check,
-  X
+import {
+    ChevronRight,
+    ChevronLeft,
+    CheckCircle,
+    XCircle,
+    Lock,
+    Trash2,
+    Edit3,
+    Trophy,
+    ArrowRight,
+    FileText,
+    UploadCloud,
+    Check,
+    X
 } from 'lucide-react';
-import './Serie.css';
+import './SerieClassic.css';
 
 const API_URL = `${API_BASE_URL}/quiz/questions`;
 const FREE_TRIAL_LIMIT = 3;
@@ -52,6 +52,7 @@ export default function Serie() {
     const [showEditModal, setShowEditModal] = useState(false);
     const [imageLoading, setImageLoading] = useState(true);
 
+    const [selectedLetter, setSelectedLetter] = useState('?');
     const [deleteMode, setDeleteMode] = useState(false);
     const [selectedIndices, setSelectedIndices] = useState([]);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -61,7 +62,6 @@ export default function Serie() {
     const [editImageFile, setEditImageFile] = useState(null);
     const [editPreviewUrl, setEditPreviewUrl] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
-    const statusMessage = '';
 
     const isSubscribed = localStorage.getItem('subscriptions') === 'true';
     const currentQuestion = quizData[currentQuestionIndex];
@@ -96,6 +96,7 @@ export default function Serie() {
                     setImageLoading(true);
                     setDeleteMode(false);
                     setSelectedIndices([]);
+                    setSelectedLetter('?');
                 } else {
                     setQuizData([]);
                     setError(`لم يتم العثور على دروس للفئة المحددة.`);
@@ -114,6 +115,7 @@ export default function Serie() {
         if (currentQuestionIndex < visibleLessonCount - 1) {
             setImageLoading(true);
             setCurrentQuestionIndex(currentQuestionIndex + 1);
+            setSelectedLetter('?');
         }
     };
 
@@ -121,6 +123,7 @@ export default function Serie() {
         if (currentQuestionIndex > 0) {
             setImageLoading(true);
             setCurrentQuestionIndex(currentQuestionIndex - 1);
+            setSelectedLetter('?');
         }
     };
 
@@ -135,6 +138,7 @@ export default function Serie() {
             if (index >= 0 && index < visibleLessonCount) {
                 setImageLoading(true);
                 setCurrentQuestionIndex(index);
+                setSelectedLetter('?');
             }
         }
     };
@@ -214,18 +218,18 @@ export default function Serie() {
 
     if (loading) {
         return (
-            <div className='serie-page-wrapper' style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div className="reveal-anim" style={{ fontSize: '24px', fontWeight: 800, color: 'var(--primary)' }}>جاري تحميل الدروس... ✨</div>
+            <div className='serie-classic-wrapper' style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ fontSize: '24px', fontWeight: 800, color: '#3b5998' }}>جاري تحميل الدروس... ✨</div>
             </div>
         );
     }
 
     if (error || totalQuestions === 0) {
         return (
-            <div className='serie-page-wrapper' style={{ textAlign: 'center', color: '#f43f5e', padding: '100px' }}>
+            <div className='serie-classic-wrapper' style={{ textAlign: 'center', color: '#f43f5e', padding: '100px' }}>
                 <XCircle size={60} style={{ marginBottom: '20px' }} />
                 <h2>{error || 'لا توجد دروس متاحة.'}</h2>
-                <button className='btn-premium-sm' onClick={() => navigate('/cours')} style={{ marginTop: '20px' }}>العودة للدروس</button>
+                <button className='btn-classic' onClick={() => navigate('/cours')} style={{ marginTop: '20px' }}>العودة للدروس</button>
             </div>
         );
     }
@@ -234,32 +238,42 @@ export default function Serie() {
     const isCurrentLessonLocked = !isSubscribed && currentQuestionIndex >= FREE_TRIAL_LIMIT;
 
     return (
-        <div className="serie-page-wrapper">
-            <Navbar />
-            
+        <div className="serie-classic-wrapper">
+            {/* Top Bar matching image */}
+            <div className="classic-top-bar">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                    <button className="btn-classic-back" onClick={() => navigate(-1)}>
+                        <ChevronRight size={18} /> رجوع
+                    </button>
+                    <span>{mainCategory} - {currentTopic}</span>
+                </div>
+                <span style={{ fontWeight: 'bold' }}>codedelaroute.tn</span>
+                <span>سلسلة {new URLSearchParams(location.search).get('nb_serie') || '1'}</span>
+            </div>
+
             {showEditModal && (
                 <div className="overlay-premium" style={{ opacity: 1, zIndex: 2000, overflowY: 'auto', padding: '20px' }}>
-                    <div className="reveal-anim" style={{ background: 'var(--bg-darker)', width: '90%', maxWidth: '800px', border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-2xl)', padding: '50px', position: 'relative' }}>
-                        <button style={{ position: 'absolute', top: '30px', left: '30px', background: 'none', border: 'none', color: 'white' }} onClick={() => setShowEditModal(false)}>
+                    <div className="reveal-anim" style={{ background: 'white', width: '90%', maxWidth: '800px', border: '1px solid #3b5998', borderRadius: '12px', padding: '50px', position: 'relative' }}>
+                        <button style={{ position: 'absolute', top: '30px', left: '30px', background: 'none', border: 'none', color: '#3b5998' }} onClick={() => setShowEditModal(false)}>
                             <X size={32} />
                         </button>
-                        <h2 style={{ fontSize: '32px', marginBottom: '40px' }}>🛠️ تعديل الدرس</h2>
-                        
+                        <h2 style={{ fontSize: '32px', marginBottom: '40px', color: '#3b5998' }}>🛠️ تعديل الدرس</h2>
+
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
                             <div>
-                                <label style={{ display: 'block', marginBottom: '12px', fontWeight: 700 }}>محتوى الدرس (السؤال ثم الإجابة الصحيحة ثم الخاطئة)</label>
-                                <textarea 
-                                    value={editOutputText} 
+                                <label style={{ display: 'block', marginBottom: '12px', fontWeight: 700, color: '#3b5998' }}>محتوى الدرس (السؤال ثم الإجابة الصحيحة ثم الخاطئة)</label>
+                                <textarea
+                                    value={editOutputText}
                                     onChange={(e) => setEditOutputText(e.target.value)}
                                     rows="8"
-                                    style={{ width: '100%', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--glass-border)', color: 'white', borderRadius: '12px', padding: '20px', fontSize: '16px', outline: 'none' }}
+                                    style={{ width: '100%', background: '#f5f5f5', border: '1px solid #ccc', color: 'black', borderRadius: '12px', padding: '20px', fontSize: '16px', outline: 'none' }}
                                 />
                             </div>
 
                             <div>
-                                <label style={{ display: 'block', marginBottom: '12px', fontWeight: 700 }}>تعديل الصورة</label>
-                                <label style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '15px', padding: '15px', border: '1px dashed var(--glass-border)', borderRadius: '12px' }}>
-                                    <UploadCloud size={24} color="var(--primary)" />
+                                <label style={{ display: 'block', marginBottom: '12px', fontWeight: 700, color: '#3b5998' }}>تعديل الصورة</label>
+                                <label style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '15px', padding: '15px', border: '1px dashed #3b5998', borderRadius: '12px' }}>
+                                    <UploadCloud size={24} color="#3b5998" />
                                     <span>{editImageFile ? editImageFile.name : 'اختر صورة جديدة...'}</span>
                                     <input type="file" hidden onChange={(e) => {
                                         if (e.target.files?.[0]) {
@@ -270,7 +284,7 @@ export default function Serie() {
                                 </label>
                             </div>
 
-                            <button className="btn-premium" onClick={handleSaveEdit} disabled={isSaving}>
+                            <button className="btn-classic" onClick={handleSaveEdit} disabled={isSaving} style={{ background: '#3b5998', color: 'white', padding: '15px' }}>
                                 {isSaving ? 'جاري الحفظ...' : 'حفظ التغييرات ✅'}
                             </button>
                         </div>
@@ -278,102 +292,84 @@ export default function Serie() {
                 </div>
             )}
 
-            <div className="serie-layout">
-                {/* Sidebar */}
-                <aside className="serie-sidebar reveal-anim">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <h3 style={{ fontSize: '20px', fontWeight: 800 }}>قائمة الدروس</h3>
-                        <div style={{ display: 'flex', gap: '10px' }}>
-                            <button onClick={() => setDeleteMode(!deleteMode)} style={{ background: 'none', border: 'none', color: deleteMode ? '#f43f5e' : 'var(--text-gray)', cursor: 'pointer' }}>
-                                <Trash2 size={18} />
-                            </button>
-                            <button onClick={() => {
-                                const correctOpt = currentQuestion.options.find(o => o.isCorrect);
-                                const incorrectOpts = currentQuestion.options.filter(o => !o.isCorrect);
-                                setEditOutputText([currentQuestion.question, correctOpt?.text || '', ...incorrectOpts.map(o => o.text)].join('\n'));
-                                setEditImageFile(null);
-                                setEditPreviewUrl(currentQuestion.image);
-                                setShowEditModal(true);
-                            }} style={{ background: 'none', border: 'none', color: 'var(--text-gray)', cursor: 'pointer' }}>
-                                <Edit3 size={18} />
-                            </button>
-                        </div>
-                    </div>
-
-                    {deleteMode && (
-                        <div style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
-                             <button className="btn-premium-sm" onClick={handleBatchDelete} style={{ flex: 1, background: '#f43f5e', fontSize: '12px' }}>حذف المختار ({selectedIndices.length})</button>
-                             <button className="signup-button" onClick={() => setDeleteMode(false)} style={{ flex: 1, fontSize: '12px' }}>إلغاء</button>
-                        </div>
-                    )}
-
-                    <div className="lesson-grid-premium" ref={scrollRef}>
-                        {quizData.map((_, i) => {
-                            const isLocked = !isSubscribed && i >= FREE_TRIAL_LIMIT;
-                            return (
-                                <button
+            <div className="classic-main-container">
+                <div className="classic-blue-section">
+                    {/* Right side (Numbers) - Moved from Right to Left visually by being last in RTL code */}
+                    <div className="classic-numbers-sidebar">
+                        <div className="classic-numbers-header">الاجابات الخاطئة</div>
+                        <div className="classic-numbers-grid" ref={scrollRef}>
+                            {quizData.map((_, i) => (
+                                <div
                                     key={i}
-                                    className={`lesson-btn-premium ${i === currentQuestionIndex ? 'active' : ''} ${isLocked ? 'locked' : ''} ${selectedIndices.includes(i) ? 'selected' : ''}`}
+                                    className={`classic-number-row ${i === currentQuestionIndex ? 'active' : ''}`}
                                     onClick={() => handleJumpToQuestion(i)}
-                                    disabled={!deleteMode && isLocked}
                                 >
-                                    {isLocked ? <Lock size={12} /> : i + 1}
-                                </button>
-                            )
-                        })}
-                    </div>
-
-                    <div style={{ marginTop: 'auto', paddingTop: '32px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '15px', color: 'var(--text-gray)', fontSize: '14px' }}>
-                            <Trophy size={20} color="var(--primary)" />
-                            <span>سلسلة: {new URLSearchParams(location.search).get('nb_serie') || '1'}</span>
+                                    <span>{i + 1}</span>
+                                </div>
+                            ))}
                         </div>
                     </div>
-                </aside>
 
-                {/* Main Content */}
-                <main className="question-content-premium reveal-anim" style={{ animationDelay: '0.1s' }}>
-                    <div className="question-container-premium">
+                    {/* Middle (Image) */}
+                    <div className="classic-image-container">
                         {isCurrentLessonLocked ? (
-                            <div style={{ textAlign: 'center', padding: '60px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '30px' }}>
-                                <div style={{ width: '100px', height: '100px', background: 'var(--bg-accent)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)' }}>
-                                    <Lock size={48} />
-                                </div>
-                                <h2 style={{ fontSize: '32px' }}>الدرس محجوب</h2>
-                                <p className="hero-desc">لقد وصلت للحد الأقصى للدروس المجانية. اشترك لتفتح هذا الدرس وأكثر من 1000 درس آخر.</p>
-                                <button className="btn-premium" onClick={() => navigate('/subscriptions')}>اشترك واستمتع بالكامل</button>
+                            <div style={{ textAlign: 'center', color: '#3b5998' }}>
+                                <Lock size={80} />
+                                <h3 style={{ marginTop: '20px' }}>محتوى مقفل</h3>
+                                <button className="btn-classic" onClick={() => navigate('/subscriptions')} style={{ marginTop: '20px' }}>إشترك لفتح الدرس</button>
                             </div>
                         ) : (
-                            <>
-                                <div className="q-image-wrapper">
-                                    <img src={currentQuestion.image} alt="Question" />
-                                    {imageLoading && <div style={{ position: 'absolute', inset: 0, background: 'var(--bg-darker)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>جاري التحميل...</div>}
-                                </div>
-
-                                <h1 className="q-text-premium">{currentQuestion.question}</h1>
-
-                                <div className="options-stack">
-                                    {currentQuestion.options.map((opt, i) => (
-                                        <div key={i} className={`option-card-premium ${opt.isCorrect ? 'correct' : 'incorrect'}`}>
-                                            <div className="opt-letter-premium">{['أ', 'ب', 'ج'][i]}</div>
-                                            <div style={{ flexGrow: 1, fontSize: '20px', fontWeight: 600 }}>{opt.text}</div>
-                                            {opt.isCorrect ? <CheckCircle color="#10b981" /> : <XCircle color="#f43f5e" opacity={0.5} />}
-                                        </div>
-                                    ))}
-                                </div>
-                            </>
+                            <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', justifyContent: 'center' }}>
+                                <img src={currentQuestion.image} alt="Question" onLoad={() => setImageLoading(false)} />
+                                {imageLoading && <div style={{ position: 'absolute', inset: 0, background: '#f5f5f5', color: '#315494', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>جاري تحميل الصورة...</div>}
+                            </div>
                         )}
                     </div>
 
-                    <div className="quiz-nav-premium">
-                        <button className="signup-button" style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '18px', padding: '16px 32px' }} onClick={handlePrev} disabled={currentQuestionIndex === 0}>
-                            <ChevronRight /> الدرس السابق
-                        </button>
-                        <button className="btn-premium" style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '18px', padding: '16px 32px' }} onClick={handleNext} disabled={currentQuestionIndex >= visibleLessonCount - 1}>
-                            التالي <ChevronLeft />
-                        </button>
+                    {/* Left side (Answer box) - Moved from Left to Right visually by being first in RTL code */}
+                    <div className="classic-answer-sidebar">
+                        <h4>اجابتك هي</h4>
+                        <p style={{ margin: '0 0 10px' }}>Votre réponse</p>
+                        <div className="classic-answer-box">
+                            {selectedLetter}
+                        </div>
+                        <div className="classic-metadata">
+                            <p className="category-label">{currentTopic}</p>
+                            <p>Serie {new URLSearchParams(location.search).get('nb_serie') || '1'}</p>
+                            <button onClick={() => setShowEditModal(true)} style={{ background: 'none', border: 'none', color: '#3b5998', marginTop: '10px', textDecoration: 'underline', cursor: 'pointer' }}>تعديل</button>
+                        </div>
                     </div>
-                </main>
+                </div>
+
+                <div className="classic-bottom-section">
+                    {!isCurrentLessonLocked && (
+                        <div className="classic-question-area">
+                            <h1 className="classic-question-text">{currentQuestion.question}</h1>
+
+                            <div className="classic-options-container">
+                                {currentQuestion.options.slice(0, 3).map((opt, i) => (
+                                    <div key={i} className="classic-option-item" onClick={() => setSelectedLetter(['أ', 'ب', 'ج'][i])}>
+                                        <div className={`classic-option-box ${['option-a', 'option-b', 'option-c'][i]}`}>
+                                            {['أ', 'ب', 'ج'][i]}
+                                        </div>
+                                        <div className="classic-option-text">{opt.text}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="classic-controls-wrapper">
+                        <div className="classic-controls">
+                            <button className="btn-classic" onClick={handlePrev} disabled={currentQuestionIndex === 0}>
+                                السابق
+                            </button>
+                            <button className="btn-classic" onClick={handleNext} disabled={currentQuestionIndex >= visibleLessonCount - 1}>
+                                التالي
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     );

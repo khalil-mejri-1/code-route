@@ -12,15 +12,17 @@ const GlobalBackButton = () => {
     }
 
     return (
-        <button
-            className="global-back-floating reveal-anim"
-            onClick={() => navigate(-1)}
-            title="رجوع للقائمة السابقة"
-            style={{ border: 'none', appearance: 'none', fontFamily: 'inherit' }}
-        >
-            <ArrowLeft size={18} />
-            <span>رجوع</span>
-        </button>
+        <>
+            {/* <button
+                className="global-back-floating reveal-anim"
+                onClick={() => navigate(-1)}
+                title="رجوع للقائمة السابقة"
+                style={{ border: 'none', appearance: 'none', fontFamily: 'inherit' }}
+            >
+                <ArrowLeft size={18} />
+                <span>رجوع</span>
+            </button> */}
+        </>
     );
 };
 

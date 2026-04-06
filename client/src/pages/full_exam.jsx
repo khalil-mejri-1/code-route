@@ -1,23 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
-import Navbar from '../comp/navbar';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { API_BASE_URL } from '../config';
+import { API_BASE_URL, IMGBB_API_KEY, IMGBB_UPLOAD_URL } from '../config';
 import {
-  ChevronRight,
-  ChevronLeft,
-  CheckCircle,
-  XCircle,
-  Lock,
-  Settings,
-  Award,
-  UploadCloud,
-  X,
-  Target,
-  Trophy,
-  Shuffle
+    ChevronRight,
+    ChevronLeft,
+    CheckCircle,
+    XCircle,
+    Lock,
+    Settings,
+    Award,
+    UploadCloud,
+    X,
+    Target,
+    Trophy,
+    Shuffle
 } from 'lucide-react';
-import './Serie.css';
+import './SerieClassic.css';
 
 const FREE_TRIAL_LIMIT = 5;
 
@@ -50,6 +49,11 @@ export default function FullExam() {
     const [selectedAnswer, setSelectedAnswer] = useState(null);
     const [showAnswer, setShowAnswer] = useState(false);
     const [userAnswersHistory, setUserAnswersHistory] = useState([]);
+
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [editOutputText, setEditOutputText] = useState('');
+    const [editImageFile, setEditImageFile] = useState(null);
+    const [isSaving, setIsSaving] = useState(false);
 
     const isSubscribed = localStorage.getItem('subscriptions') === 'true';
 
@@ -103,6 +107,55 @@ export default function FullExam() {
     const isLocked = !isSubscribed && currentQuestionIndex >= FREE_TRIAL_LIMIT;
     const currentQuestion = quizData[currentQuestionIndex];
 
+    const uploadToImgBB = async (file) => {
+        const base64 = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result.split(',')[1]);
+            reader.onerror = (error) => reject(error);
+            reader.readAsDataURL(file);
+        });
+        const params = new URLSearchParams();
+        params.append('image', base64);
+        const response = await fetch(`${IMGBB_UPLOAD_URL}?key=${IMGBB_API_KEY}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params.toString()
+        });
+        const data = await response.json();
+        if (data.success) return data.data.url;
+        throw new Error('فشل رفع الصورة');
+    };
+
+    const handleSaveEdit = async () => {
+        const lines = editOutputText.split('\n').map(l => l.trim()).filter(l => l);
+        if (lines.length < 2) return alert('برجاء تزويد السؤال وإجابة واحدة على الأقل.');
+
+        setIsSaving(true);
+        try {
+            let imageUrl = currentQuestion.image;
+            if (editImageFile) imageUrl = await uploadToImgBB(editImageFile);
+            const questionText = lines[0];
+            const options = lines.slice(1).map((text, idx) => ({ text, isCorrect: idx === 0 }));
+
+            await axios.put(`${API_BASE_URL}/questions/${currentQuestion._id}`, {
+                question: questionText,
+                options: options,
+                image: imageUrl
+            });
+
+            const updatedData = [...quizData];
+            updatedData[currentQuestionIndex] = { ...currentQuestion, question: questionText, options: options, image: imageUrl };
+            setQuizData(updatedData);
+            setShowEditModal(false);
+            alert('✅ تم التحديث بنجاح!');
+        } catch (err) {
+            console.error(err);
+            alert('❌ فشل التحديث.');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     const handleAnswerClick = (idx) => {
         if (!showAnswer && !isLocked) setSelectedAnswer(idx);
     };
@@ -136,9 +189,8 @@ export default function FullExam() {
 
     if (loading) {
         return (
-            <div className='serie-page-wrapper' style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div className='reveal-anim' style={{ fontSize: '24px', fontWeight: 800, color: 'var(--secondary)', textAlign: 'center' }}>
-                    <Trophy size={48} style={{ marginBottom: '20px', display: 'block', margin: '0 auto 20px' }} />
+            <div className='serie-classic-wrapper' style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ fontSize: '24px', fontWeight: 800, color: '#3b5998', textAlign: 'center' }}>
                     جاري تجهيز الاختبار الشامل...
                 </div>
             </div>
@@ -147,158 +199,168 @@ export default function FullExam() {
 
     if (error) {
         return (
-            <div className='serie-page-wrapper' style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div className='serie-classic-wrapper' style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <div style={{ textAlign: 'center', color: '#f43f5e' }}>{error}</div>
             </div>
         );
     }
 
+    const selectedLetter = selectedAnswer !== null ? ['أ', 'ب', 'ج'][selectedAnswer] : '?';
+
     return (
-        <div className="serie-page-wrapper">
-            <Navbar />
-            <div className="serie-layout">
-                {/* Sidebar */}
-                <aside className="serie-sidebar reveal-anim">
-                    <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-                        <div style={{ display: 'inline-flex', padding: '15px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--primary), var(--secondary))', color: 'white', marginBottom: '15px' }}>
-                            <Trophy size={32} />
+        <div className="serie-classic-wrapper">
+            <div className="classic-top-bar">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                    <button className="btn-classic-back" onClick={() => navigate(-1)}>
+                        <ChevronRight size={18} /> رجوع
+                    </button>
+                    <span>الاختبار الشامل - فئة {category1}</span>
+                </div>
+                <span style={{ fontWeight: 'bold' }}>codedelaroute.tn</span>
+                <span>{answeredCount} / {totalQuestions} سؤال</span>
+            </div>
+
+            {showEditModal && (
+                <div className="overlay-premium" style={{ opacity: 1, zIndex: 2000, overflowY: 'auto', padding: '20px' }}>
+                    <div className="reveal-anim" style={{ background: 'white', width: '90%', maxWidth: '800px', border: '1px solid #3b5998', borderRadius: '12px', padding: '50px', position: 'relative' }}>
+                        <button style={{ position: 'absolute', top: '30px', left: '30px', background: 'none', border: 'none', color: '#3b5998' }} onClick={() => setShowEditModal(false)}>
+                            <X size={32} />
+                        </button>
+                        <h2 style={{ fontSize: '32px', marginBottom: '40px', color: '#3b5998' }}>🛠️ تعديل سؤال الاختبار</h2>
+                        
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '12px', fontWeight: 700, color: '#3b5998' }}>محتوى السؤال (السؤال ثم الإجابة الصحيحة ثم الخاطئة)</label>
+                                <textarea 
+                                    value={editOutputText} 
+                                    onChange={(e) => setEditOutputText(e.target.value)}
+                                    rows="8"
+                                    style={{ width: '100%', background: '#f5f5f5', border: '1px solid #ccc', color: 'black', borderRadius: '12px', padding: '20px', fontSize: '16px', outline: 'none' }}
+                                />
+                            </div>
+
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '12px', fontWeight: 700, color: '#3b5998' }}>تعديل الصورة</label>
+                                <label style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '15px', padding: '15px', border: '1px dashed #3b5998', borderRadius: '12px' }}>
+                                    <UploadCloud size={24} color="#3b5998" />
+                                    <span>{editImageFile ? editImageFile.name : 'اختر صورة جديدة...'}</span>
+                                    <input type="file" hidden onChange={(e) => {
+                                        if (e.target.files?.[0]) {
+                                            setEditImageFile(e.target.files[0]);
+                                        }
+                                    }} />
+                                </label>
+                            </div>
+
+                            <button className="btn-classic" onClick={handleSaveEdit} disabled={isSaving} style={{ background: '#3b5998', color: 'white', padding: '15px' }}>
+                                {isSaving ? 'جاري الحفظ...' : 'حفظ التغييرات ✅'}
+                            </button>
                         </div>
-                        <h3 style={{ fontSize: '22px', fontWeight: 800 }}>الاختبار الشامل</h3>
-                        <p style={{ color: 'var(--text-dim)', fontSize: '13px', marginTop: '6px' }}>
-                            فئة {category1} {category2 ? ` — ${category2}` : ''} <br/> ({totalQuestions} سؤال)
-                            {examSerieParam && (
-                                <>
-                                    <br />
-                                    <span style={{ color: 'var(--primary)', fontWeight: 700, marginTop: '8px', display: 'inline-block' }}>
-                                        السلسلة المدمجة: {examSerieParam} من امتحانات
-                                    </span>
-                                </>
-                            )}
-                            {currentQuestion && currentQuestion.category1 !== 'امتحانات' && examSerieParam && (
-                                <>
-                                    <br />
-                                    <span style={{ color: '#10b981', fontWeight: 700, marginTop: '8px', display: 'inline-block' }}>
-                                        هذا السؤال من فئة: {currentQuestion.category1} (سلسلة {currentQuestion.nb_serie})
-                                    </span>
-                                </>
-                            )}
-                        </p>
+                    </div>
+                </div>
+            )}
+
+            <div className="classic-main-container">
+                <div className="classic-blue-section">
+                    {/* Numbers sidebar (Visual Right in RTL, last in JSX) */}
+                    <div className="classic-numbers-sidebar">
+                        <div className="classic-numbers-header">أسئلة الاختبار</div>
+                        <div className="classic-numbers-grid" ref={scrollRef}>
+                            {quizData.map((_, i) => {
+                                const h = userAnswersHistory[i];
+                                const locked = !isSubscribed && i >= FREE_TRIAL_LIMIT;
+                                return (
+                                    <div
+                                        key={i}
+                                        className={`classic-number-row ${i === currentQuestionIndex ? 'active' : ''}`}
+                                        onClick={() => !locked && navigateTo(i)}
+                                        style={h !== null ? { color: h ? '#10b981' : '#f43f5e', fontWeight: 'bold' } : locked ? { opacity: 0.3 } : {}}
+                                    >
+                                        <span>{i + 1}</span>
+                                        {locked && <Lock size={10} />}
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
 
-                    {/* Progress */}
-                    <div style={{ background: 'rgba(255,255,255,0.03)', padding: '20px', borderRadius: '16px', marginBottom: '20px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                            <span style={{ fontSize: '13px', color: 'var(--text-gray)' }}>الصحيحة</span>
-                            <span style={{ fontWeight: 800, color: '#10b981' }}>{correctCount}</span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                            <span style={{ fontSize: '13px', color: 'var(--text-gray)' }}>تمت الإجابة</span>
-                            <span style={{ fontWeight: 800, color: 'var(--primary)' }}>{answeredCount} / {totalQuestions}</span>
-                        </div>
-                        <div style={{ height: '6px', background: 'var(--bg-darker)', borderRadius: '10px', overflow: 'hidden' }}>
-                            <div style={{ height: '100%', width: `${(answeredCount / totalQuestions) * 100}%`, background: 'linear-gradient(90deg, var(--primary), var(--secondary))', transition: 'width 0.5s ease' }}></div>
-                        </div>
-                    </div>
-
-                    {/* Question Grid */}
-                    <div className="lesson-grid-premium" ref={scrollRef}>
-                        {quizData.map((_, i) => {
-                            const locked = !isSubscribed && i >= FREE_TRIAL_LIMIT;
-                            const h = userAnswersHistory[i];
-                            return (
-                                <button
-                                    key={i}
-                                    className={`lesson-btn-premium ${i === currentQuestionIndex ? 'active' : ''} ${locked ? 'locked' : ''}`}
-                                    onClick={() => navigateTo(i)}
-                                    disabled={locked}
-                                    style={h !== null ? {
-                                        background: h ? 'rgba(16, 185, 129, 0.2)' : 'rgba(244, 63, 94, 0.2)',
-                                        color: h ? '#10b981' : '#f43f5e',
-                                        borderColor: h ? '#10b981' : '#f43f5e'
-                                    } : {}}
-                                >
-                                    {locked ? <Lock size={12} /> : i + 1}
-                                </button>
-                            );
-                        })}
-                    </div>
-                </aside>
-
-                {/* Main Content */}
-                <main className="question-content-premium reveal-anim">
-                    <div className="question-container-premium">
+                    {/* Middle (Image) */}
+                    <div className="classic-image-container">
                         {isLocked ? (
-                            <div style={{ textAlign: 'center', padding: '80px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
-                                <Lock size={64} color="var(--primary)" />
-                                <h1 style={{ fontSize: '36px' }}>نهاية العرض التجريبي</h1>
-                                <p className='hero-desc'>لقد أجبت على {FREE_TRIAL_LIMIT} أسئلة مجانية من الاختبار الشامل. اشترك الآن للوصول إلى كامل الأسئلة.</p>
-                                <button className='btn-premium' onClick={() => navigate('/subscriptions')}>إشترك الآن</button>
+                            <div style={{ textAlign: 'center', color: '#3b5998' }}>
+                                <Lock size={80} />
+                                <h3 style={{ marginTop: '20px' }}>العرض المحدود</h3>
+                                <button className="btn-classic" onClick={() => navigate('/subscriptions')} style={{ marginTop: '20px' }}>اشترك الآن لفتح الاختبار</button>
                             </div>
                         ) : (
-                            <>
-                                {/* Category tag */}
-                                {currentQuestion.category2 && (
-                                    <div style={{ marginBottom: '16px' }}>
-                                        <span className="badge-new" style={{ fontSize: '12px', padding: '6px 14px' }}>
-                                            {currentQuestion.category2}
-                                        </span>
-                                    </div>
-                                )}
-
-                                <div className="q-image-wrapper">
-                                    <img src={currentQuestion.image} alt="Exam" />
-                                </div>
-
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                                    <Target size={24} color="var(--secondary)" />
-                                    <h1 className="q-text-premium" style={{ marginBottom: 0 }}>{currentQuestion.question}</h1>
-                                </div>
-
-                                <div className="options-stack">
-                                    {currentQuestion.options.map((opt, i) => (
-                                        <div
-                                            key={i}
-                                            className={`option-card-premium 
-                                                ${showAnswer && opt.isCorrect ? 'correct' : ''} 
-                                                ${showAnswer && !opt.isCorrect && selectedAnswer === i ? 'incorrect' : ''} 
-                                                ${!showAnswer && selectedAnswer === i ? 'selected' : ''}`}
-                                            onClick={() => handleAnswerClick(i)}
-                                            style={{ cursor: showAnswer ? 'default' : 'pointer' }}
-                                        >
-                                            <div className="opt-letter-premium">{['أ', 'ب', 'ج'][i]}</div>
-                                            <div style={{ flexGrow: 1, fontSize: '18px', fontWeight: 600 }}>{opt.text}</div>
-                                            {showAnswer && opt.isCorrect && <CheckCircle color="#10b981" />}
-                                            {showAnswer && !opt.isCorrect && selectedAnswer === i && <XCircle color="#f43f5e" />}
-                                        </div>
-                                    ))}
-                                </div>
-
-                                {!showAnswer && (
-                                    <button
-                                        className="btn-premium"
-                                        onClick={handleReveal}
-                                        disabled={selectedAnswer === null}
-                                        style={{ width: '100%', marginTop: '20px' }}
-                                    >
-                                        تأكيد الإجابة
-                                    </button>
-                                )}
-                            </>
+                            <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', justifyContent: 'center' }}>
+                                <img src={currentQuestion.image} alt="Exam" />
+                            </div>
                         )}
                     </div>
 
-                    <div className="quiz-nav-premium">
-                        <button className="signup-button" onClick={() => navigateTo(currentQuestionIndex - 1)} disabled={currentQuestionIndex === 0}>
-                            <ChevronRight /> السابق
-                        </button>
-                        <span style={{ color: 'var(--text-gray)', fontSize: '14px', fontWeight: 700 }}>
-                            {currentQuestionIndex + 1} / {visibleCount}
-                        </span>
-                        <button className="btn-premium" onClick={() => navigateTo(currentQuestionIndex + 1)} disabled={currentQuestionIndex >= visibleCount - 1}>
-                            التالي <ChevronLeft />
-                        </button>
+                    {/* Answer Box (Visual Left in RTL, first in JSX) */}
+                    <div className="classic-answer-sidebar">
+                        <h4>اجابتك هي</h4>
+                        <p style={{ margin: '0 0 10px' }}>Votre réponse</p>
+                        <div className="classic-answer-box">
+                            {selectedLetter}
+                        </div>
+                        <div className="classic-metadata">
+                            <p className="category-label">{category2 || 'اختبار شامل'}</p>
+                            <p style={{ color: '#10b981', fontWeight: 'bold' }}>الصح: {correctCount}</p>
+                            <button 
+                                onClick={() => {
+                                    const correctOpt = currentQuestion.options.find(o => o.isCorrect);
+                                    const incorrectOpts = currentQuestion.options.filter(o => !o.isCorrect);
+                                    setEditOutputText([currentQuestion.question, correctOpt?.text || '', ...incorrectOpts.map(o => o.text)].join('\n'));
+                                    setEditImageFile(null);
+                                    setShowEditModal(true);
+                                }} 
+                                style={{ background: 'none', border: 'none', color: '#3b5998', marginTop: '10px', textDecoration: 'underline', cursor: 'pointer', fontSize: '12px' }}
+                            >
+                                تعديل السؤال
+                            </button>
+                        </div>
                     </div>
-                </main>
+                </div>
+
+                <div className="classic-bottom-section">
+                    {!isLocked && (
+                        <div className="classic-question-area">
+                            <h1 className="classic-question-text">{currentQuestion.question}</h1>
+                            
+                            <div className="classic-options-container">
+                                {currentQuestion.options.map((opt, i) => (
+                                    <div key={i} className={`classic-option-item ${showAnswer && opt.isCorrect ? 'option-correct' : ''}`} onClick={() => handleAnswerClick(i)}>
+                                        <div className={`classic-option-box ${['option-a', 'option-b', 'option-c'][i]}`}>
+                                            {['أ', 'ب', 'ج'][i]}
+                                        </div>
+                                        <div className="classic-option-text" style={showAnswer && opt.isCorrect ? { color: '#10b981' } : {}}>{opt.text}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="classic-controls-wrapper">
+                        <div className="classic-controls">
+                            <button className="btn-classic" onClick={() => navigateTo(currentQuestionIndex - 1)} disabled={currentQuestionIndex === 0}>
+                                السابق
+                            </button>
+                            
+                            {!showAnswer && !isLocked && (
+                                <button className="btn-classic" onClick={handleReveal} disabled={selectedAnswer === null} style={{ background: '#3b5998', color: 'white', borderColor: '#3b5998' }}>
+                                    تأكيد الإجابة
+                                </button>
+                            )}
+
+                            <button className="btn-classic" onClick={() => navigateTo(currentQuestionIndex + 1)} disabled={currentQuestionIndex >= visibleCount - 1}>
+                                التالي
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     );
