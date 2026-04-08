@@ -22,6 +22,7 @@ import AdminPanel from "./pages/admin/AdminPanel.jsx"; // Import the AdminPanel 
 import MoveSeries from "./pages/admin/MoveSeries.jsx"; // ⭐️ New Component
 import GlobalBackButton from "./comp/GlobalBackButton"; // ⭐️ New Component
 import FullExam from "./pages/full_exam.jsx"; // ⭐️ Comprehensive Exam Page
+import FormationView from "./pages/FormationView.jsx"; // ⭐️ Training Images Page
 
 const MODAL_CLOSED_KEY = "welcomeModalClosed";
 
@@ -80,6 +81,7 @@ const App = () => {
           <Route path="/admin/move-series" element={<MoveSeries />} />
           <Route path="/full-exam" element={<FullExam />} />
           <Route path="/examen/question" element={<Examen_question />} />
+          <Route path="/formation" element={<FormationView />} /> {/* ⭐️ New Route */}
 
           {/* Catch-all route for any other path */}
           <Route path="/*" element={<Home />} />

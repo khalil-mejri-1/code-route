@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Navbar from '../comp/navbar';
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
-import { Lock, Play, CheckCircle, Trophy, ArrowLeft } from 'lucide-react';
+import { Lock, Play, CircleCheckBig, Trophy, ArrowLeft } from 'lucide-react';
 
 const parseCategoryParam = (param) => {
     if (!param) return { category1: '', category2: '' };
@@ -66,9 +66,21 @@ function SerieCard({ serieNum, isLocked, categoryParam, isLoggedIn }) {
                 
                 <div 
                     onClick={toggleCheck}
-                    style={{ position: 'absolute', top: '20px', left: '20px', cursor: 'pointer', color: isChecked ? '#10b981' : 'var(--glass-border)' }}
+                    style={{ 
+                        position: 'absolute', 
+                        top: '18px', 
+                        left: '18px', 
+                        cursor: 'pointer', 
+                        color: isChecked ? '#10b981' : 'rgba(255,255,255,0.15)',
+                        transition: 'all 0.3s ease',
+                        zIndex: 10
+                    }}
+                    title="تحديد"
                 >
-                    <CheckCircle size={24} fill={isChecked ? 'rgba(16, 185, 129, 0.2)' : 'none'} />
+                    <CircleCheckBig 
+                        size={24} 
+                        strokeWidth={isChecked ? 2.5 : 1.5} 
+                    />
                 </div>
             </div>
         </Link>

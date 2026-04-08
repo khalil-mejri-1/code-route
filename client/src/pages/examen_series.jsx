@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import Navbar from '../comp/navbar';
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
-import { Lock, Play, Trophy } from 'lucide-react';
+import { Lock, Play, Trophy, CircleCheckBig } from 'lucide-react';
 
 const parseCategoryParam = (param) => {
     if (!param) return { category1: '', category2: '' };
@@ -34,6 +34,24 @@ export default function ExamenSeries() {
 
     const isLoggedIn = localStorage.getItem('login') === 'true';
     const isSubscribed = localStorage.getItem('subscriptions') === 'true';
+
+    const [checkedSeries, setCheckedSeries] = useState({});
+
+    useEffect(() => {
+        // Load checked state from localStorage
+        const saved = localStorage.getItem(`checked_examen_series_${categoryParam}`);
+        if (saved) {
+            setCheckedSeries(JSON.parse(saved));
+        }
+    }, [categoryParam]);
+
+    const toggleCheck = (e, serieNum) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const nextState = { ...checkedSeries, [serieNum]: !checkedSeries[serieNum] };
+        setCheckedSeries(nextState);
+        localStorage.setItem(`checked_examen_series_${categoryParam}`, JSON.stringify(nextState));
+    };
 
     useEffect(() => {
         const fetchSeries = async () => {
@@ -96,6 +114,26 @@ export default function ExamenSeries() {
                                         </div>
                                     )}
                                     <div className="card-body-premium" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', minHeight: '220px', justifyContent: 'center' }}>
+                                        {/* زر التحديد (بنمط الأيقونة في الزاوية) */}
+                                        <div 
+                                            onClick={(e) => toggleCheck(e, serieNum)}
+                                            style={{ 
+                                                position: 'absolute', 
+                                                top: '18px', 
+                                                left: '18px', 
+                                                cursor: 'pointer', 
+                                                color: checkedSeries[serieNum] ? '#10b981' : 'rgba(255,255,255,0.15)',
+                                                transition: 'all 0.3s ease',
+                                                zIndex: 10
+                                            }}
+                                            title="تحديد"
+                                        >
+                                            <CircleCheckBig 
+                                                size={24} 
+                                                strokeWidth={checkedSeries[serieNum] ? 2.5 : 1.5}
+                                            />
+                                        </div>
+
                                         <div style={{ width: '60px', height: '60px', background: 'var(--bg-accent)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--secondary)', marginBottom: '20px' }}>
                                             <Trophy size={24} />
                                         </div>

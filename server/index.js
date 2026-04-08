@@ -6,6 +6,7 @@ const User = require('./models/User.js'); // ⭐️ استيراد مخطط ال
 const Category = require('./models/Category.js'); // ⭐️ استيراد مخطط الفئات
 const Topic = require('./models/Topic.js'); // ⭐️ استيراد مخطط المواضيع
 const ExamStructure = require('./models/ExamStructure.js'); // ⭐️ استيراد مخطط بنية الامتحانات
+const Formation = require('./models/Formation.js'); // ⭐️ استيراد مخطط التكوين
 
 const app = express();
 const port = 3000;
@@ -471,10 +472,10 @@ app.get('/api/quiz/exam', async (req, res) => {
 
         // Check for custom structure first
         const customStructure = await ExamStructure.findOne({ category: category1.trim() });
-        
+
         if (customStructure && customStructure.rules.length > 0) {
             let consolidatedQuestions = [];
-            
+
             // Loop through rules and fetch questions for each source category
             for (const rule of customStructure.rules) {
                 const sourceQuestions = await Question.find({ category1: rule.categorySource }).exec();
@@ -484,7 +485,7 @@ app.get('/api/quiz/exam', async (req, res) => {
                     consolidatedQuestions = consolidatedQuestions.concat(picked);
                 }
             }
-            
+
             // Re-shuffle the final collection
             consolidatedQuestions = consolidatedQuestions.sort(() => Math.random() - 0.5);
             return res.status(200).json(consolidatedQuestions);
@@ -523,7 +524,7 @@ app.get('/api/quiz/exam', async (req, res) => {
 
             // دمج الخليط (5 من الفئة المحددة و الباقي من الامتحان)
             shuffled = randomCategoryQuestions.concat(filteredExamQuestions);
-            
+
             // خلط الناتج النهائي ليتم توزيع أسئلة الفئة الأولى (الـ 5 العشوائية) طوال الامتحان
             shuffled = shuffled.sort(() => Math.random() - 0.5);
         } else if (!examSerie) {
@@ -558,7 +559,7 @@ app.get('/api/exam-structure/:category', async (req, res) => {
 app.post('/api/exam-structure', async (req, res) => {
     try {
         const { category, rules } = req.body;
-        
+
         // Calculate total questions
         const totalQuestions = rules.reduce((acc, rule) => acc + rule.count, 0);
 
@@ -571,6 +572,40 @@ app.post('/api/exam-structure', async (req, res) => {
         res.status(200).json({ message: 'Exam structure saved!', structure });
     } catch (error) {
         res.status(400).json({ message: 'Error saving exam structure', error: error.message });
+    }
+});
+
+// ------------------------------------------------------------------
+// ⭐️⭐️ FORMATION ROUTES ⭐️⭐️
+// ------------------------------------------------------------------
+
+// 1. Get Formation images for a category
+app.get('/api/formation/:category', async (req, res) => {
+    try {
+        const formation = await Formation.findOne({ category: req.params.category });
+        if (!formation) {
+            return res.status(200).json({ category: req.params.category, images: [] });
+        }
+        res.status(200).json(formation);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching formation images', error: error.message });
+    }
+});
+
+// 2. Add/Update Formation images
+app.post('/api/formation', async (req, res) => {
+    try {
+        const { category, images } = req.body; // images should be an array of URLs
+
+        const formation = await Formation.findOneAndUpdate(
+            { category },
+            { category, images },
+            { new: true, upsert: true }
+        );
+
+        res.status(200).json({ message: 'Formation images saved!', formation });
+    } catch (error) {
+        res.status(400).json({ message: 'Error saving formation images', error: error.message });
     }
 });
 // ------------------------------------------------------------------

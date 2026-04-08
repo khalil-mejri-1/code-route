@@ -210,6 +210,17 @@ export default function Serie() {
         throw new Error('فشل رفع الصورة');
     };
 
+    const handleAddOption = () => {
+        if (editOptions.length >= 6) return alert('الحد الأقصى 6 خيارات.');
+        setEditOptions([...editOptions, '']);
+    };
+
+    const handleRemoveOption = (index) => {
+        if (editOptions.length <= 1) return alert('يجب أن يكون هناك خيار واحد على الأقل.');
+        const newOpts = editOptions.filter((_, i) => i !== index);
+        setEditOptions(newOpts);
+    };
+
     const handleSaveEdit = async () => {
         if (!editQuestion.trim() || editOptions.some(o => !o.trim())) {
             return alert('برجاء تزويد السؤال وجميع الخيارات.');
@@ -321,11 +332,22 @@ export default function Serie() {
                             </div>
 
                             <div>
-                                <label style={{ display: 'block', marginBottom: '12px', fontWeight: 700, color: '#3b5998' }}>الخيارات (الخيار الأول هو الصحيح)</label>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                                    <label style={{ margin: 0, fontWeight: 700, color: '#3b5998' }}>الخيارات (الخيار الأول هو الصحيح)</label>
+                                    <button 
+                                        type="button" 
+                                        onClick={handleAddOption}
+                                        style={{ background: '#10b981', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 12px', fontSize: '14px', cursor: 'pointer' }}
+                                    >
+                                        ➕ إضافة خيار
+                                    </button>
+                                </div>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                     {editOptions.map((opt, i) => (
                                         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                            <span style={{ minWidth: '30px', fontWeight: 'bold', color: i === 0 ? '#10b981' : '#f43f5e' }}>{['أ', 'ب', 'ج'][i]}</span>
+                                            <span style={{ minWidth: '30px', fontWeight: 'bold', color: i === 0 ? '#10b981' : '#f43f5e' }}>
+                                                {['أ', 'ب', 'ج', 'د', 'هـ', 'و'][i] || i + 1}
+                                            </span>
                                             <input 
                                                 type="text"
                                                 value={opt}
@@ -337,6 +359,15 @@ export default function Serie() {
                                                 style={{ flex: 1, padding: '10px', border: '1px solid #ccc', borderRadius: '8px', borderRight: i === 0 ? '4px solid #10b981' : '4px solid #f43f5e' }}
                                                 placeholder={i === 0 ? 'الإجابة الصحيحة...' : 'إجابة خاطئة...'}
                                             />
+                                            {editOptions.length > 1 && (
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => handleRemoveOption(i)}
+                                                    style={{ background: '#f43f5e', color: 'white', border: 'none', borderRadius: '4px', padding: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
@@ -413,6 +444,13 @@ export default function Serie() {
                                 className="btn-edit-classic"
                             >
                                 تعديل السؤال
+                            </button>
+                            <button 
+                                onClick={() => navigate(`/formation?category=${encodeURIComponent(mainCategory)}`)} 
+                                className="btn-edit-classic"
+                                style={{ marginTop: '10px', background: '#10b981' }}
+                            >
+                                تكوين
                             </button>
                         </div>
                     </div>

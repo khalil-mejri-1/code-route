@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import Navbar from '../comp/navbar';
-import { Lock, Play, Trophy, Settings, Plus, Trash2, X, Save } from 'lucide-react';
+import { Lock, Play, Trophy, Settings, Plus, Trash2, X, Save, CircleCheckBig } from 'lucide-react';
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
 
@@ -40,6 +40,20 @@ export default function ExamsList() {
     const [allCategories, setAllCategories] = useState([]);
     const [rules, setRules] = useState([]);
     const [isSaving, setIsSaving] = useState(false);
+    const [selectedExams, setSelectedExams] = useState({});
+
+    useEffect(() => {
+        const saved = localStorage.getItem(`selected_exams_${category1}`);
+        if (saved) {
+            setSelectedExams(JSON.parse(saved));
+        }
+    }, [category1]);
+
+    const toggleSelect = (examNum) => {
+        const nextState = { ...selectedExams, [examNum]: !selectedExams[examNum] };
+        setSelectedExams(nextState);
+        localStorage.setItem(`selected_exams_${category1}`, JSON.stringify(nextState));
+    };
 
     useEffect(() => {
         if (showConfigModal) {
@@ -109,7 +123,10 @@ export default function ExamsList() {
             return;
         }
 
-        // Generate 24 unique random series numbers between 1 and 28
+        // Determine number of exams based on category
+        const numberOfExams = category1 === 'A' ? 15 : 24;
+
+        // Generate unique random series numbers between 1 and 28
         const availableSeries = Array.from({ length: 28 }, (_, i) => i + 1);
         
         // Shuffle the available series
@@ -118,8 +135,8 @@ export default function ExamsList() {
             [availableSeries[i], availableSeries[j]] = [availableSeries[j], availableSeries[i]];
         }
         
-        // Pick the first 24
-        const selectedSeries = availableSeries.slice(0, 24);
+        // Pick the needed number of exams
+        const selectedSeries = availableSeries.slice(0, numberOfExams);
         
         // Create mappings: examIndex -> mappedSerieNum
         const mappings = selectedSeries.map((mappedSerieNum, index) => ({
@@ -260,19 +277,43 @@ export default function ExamsList() {
                                     </div>
                                 )}
                                 <div className="card-body-premium" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', minHeight: '220px', justifyContent: 'center' }}>
-                                    <div style={{ width: '60px', height: '60px', background: 'linear-gradient(135deg, var(--primary), var(--secondary))', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', marginBottom: '20px', boxShadow: '0 8px 20px -5px var(--primary-glow)', position: 'relative' }}>
-                                        <Trophy size={24} />
-                                        <button 
+                                        {/* زر التحديد (بنمط الأيقونة في الزاوية) */}
+                                        <div 
                                             onClick={(e) => {
                                                 e.preventDefault();
                                                 e.stopPropagation();
-                                                setShowConfigModal(true);
+                                                toggleSelect(mapping.examNum);
                                             }}
-                                            style={{ position: 'absolute', top: '-5px', left: '-5px', background: 'white', border: '1px solid var(--primary)', borderRadius: '50%', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 5 }}
+                                            style={{ 
+                                                position: 'absolute', 
+                                                top: '18px', 
+                                                left: '18px', 
+                                                cursor: 'pointer', 
+                                                color: selectedExams[mapping.examNum] ? '#10b981' : 'rgba(255,255,255,0.15)',
+                                                transition: 'all 0.3s ease',
+                                                zIndex: 10
+                                            }}
+                                            title="تحديد"
                                         >
-                                            <Settings size={12} color="var(--primary)" />
-                                        </button>
-                                    </div>
+                                            <CircleCheckBig 
+                                                size={24} 
+                                                strokeWidth={selectedExams[mapping.examNum] ? 2.5 : 1.5}
+                                            />
+                                        </div>
+
+                                        <div style={{ width: '60px', height: '60px', background: 'linear-gradient(135deg, var(--primary), var(--secondary))', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', marginBottom: '20px', boxShadow: '0 8px 20px -5px var(--primary-glow)', position: 'relative' }}>
+                                            <Trophy size={24} />
+                                            <button 
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    setShowConfigModal(true);
+                                                }}
+                                                style={{ position: 'absolute', top: '-5px', left: '-5px', background: 'white', border: '1px solid var(--primary)', borderRadius: '50%', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 5 }}
+                                            >
+                                                <Settings size={12} color="var(--primary)" />
+                                            </button>
+                                        </div>
                                     <h3 className="card-title-premium" style={{ fontSize: '28px' }}>اختبار {mapping.examNum}</h3>
                                     <p style={{ color: 'var(--text-gray)', fontSize: '13px', marginTop: '10px' }}>
                                         السلسلة المدمجة: {mapping.mappedSerieNum}
@@ -280,6 +321,35 @@ export default function ExamsList() {
                                     <p style={{ color: 'var(--text-dim)', fontSize: '12px', marginTop: '4px' }}>
                                         (يحتوي على 30 سؤال مختلط)
                                     </p>
+
+                                    {/* ✅ زر ابدأ الاختبار */}
+                                    <div
+                                        style={{
+                                            marginTop: '20px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '8px',
+                                            padding: '11px 28px',
+                                            borderRadius: '50px',
+                                            background: isLocked
+                                                ? 'rgba(255,255,255,0.07)'
+                                                : 'linear-gradient(135deg, #10b981, #059669)',
+                                            color: isLocked ? 'rgba(255,255,255,0.3)' : 'white',
+                                            fontWeight: 700,
+                                            fontSize: '14px',
+                                            cursor: isLocked ? 'not-allowed' : 'pointer',
+                                            boxShadow: isLocked ? 'none' : '0 4px 15px rgba(16,185,129,0.4)',
+                                            transition: 'all 0.2s ease',
+                                            border: isLocked ? '1px solid rgba(255,255,255,0.1)' : 'none',
+                                            letterSpacing: '0.5px',
+                                        }}
+                                    >
+                                        {isLocked
+                                            ? <><Lock size={15} /> مقفل</>
+                                            : <><Play size={15} /> ابدأ الاختبار</>
+                                        }
+                                    </div>
                                 </div>
                             </Link>
                         );
