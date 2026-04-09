@@ -58,7 +58,7 @@ export default function Serie() {
     const [isDeleting, setIsDeleting] = useState(false);
 
     const [editQuestion, setEditQuestion] = useState('');
-    const [editOptions, setEditOptions] = useState(['', '', '']);
+    const [editOptions, setEditOptions] = useState([{ text: '', isCorrect: true }, { text: '', isCorrect: false }, { text: '', isCorrect: false }]);
     const [editImageFile, setEditImageFile] = useState(null);
     const [editPreviewUrl, setEditPreviewUrl] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
@@ -212,25 +212,33 @@ export default function Serie() {
 
     const handleAddOption = () => {
         if (editOptions.length >= 6) return alert('الحد الأقصى 6 خيارات.');
-        setEditOptions([...editOptions, '']);
+        setEditOptions([...editOptions, { text: '', isCorrect: false }]);
     };
 
     const handleRemoveOption = (index) => {
         if (editOptions.length <= 1) return alert('يجب أن يكون هناك خيار واحد على الأقل.');
+        const wasCorrect = editOptions[index].isCorrect;
         const newOpts = editOptions.filter((_, i) => i !== index);
+        if (wasCorrect && newOpts.length > 0) {
+            newOpts[0].isCorrect = true;
+        }
         setEditOptions(newOpts);
     };
 
     const handleSaveEdit = async () => {
-        if (!editQuestion.trim() || editOptions.some(o => !o.trim())) {
+        if (!editQuestion.trim() || editOptions.some(o => !o.text.trim())) {
             return alert('برجاء تزويد السؤال وجميع الخيارات.');
+        }
+
+        if (!editOptions.some(o => o.isCorrect)) {
+            return alert('يرجى تحديد إجابة صحيحة واحدة على الأقل.');
         }
 
         setIsSaving(true);
         try {
             let imageUrl = currentQuestion.image;
             if (editImageFile) imageUrl = await uploadToImgBB(editImageFile);
-            const options = editOptions.map((text, idx) => ({ text, isCorrect: idx === 0 }));
+            const options = editOptions;
 
             await axios.put(`${API_BASE_URL}/questions/${currentQuestion._id}`, {
                 question: editQuestion,
@@ -253,7 +261,7 @@ export default function Serie() {
 
     const openEditModal = () => {
         setEditQuestion(currentQuestion.question);
-        setEditOptions(currentQuestion.options.map(o => o.text));
+        setEditOptions(currentQuestion.options.map(o => ({ text: o.text, isCorrect: o.isCorrect })));
         setEditImageFile(null);
         setEditPreviewUrl(currentQuestion.image);
         setShowEditModal(true);
@@ -333,7 +341,7 @@ export default function Serie() {
 
                             <div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                                    <label style={{ margin: 0, fontWeight: 700, color: '#3b5998' }}>الخيارات (الخيار الأول هو الصحيح)</label>
+                                    <label style={{ margin: 0, fontWeight: 700, color: '#3b5998' }}>خيارات الإجابة (حدد الإجابة الصحيحة)</label>
                                     <button 
                                         type="button" 
                                         onClick={handleAddOption}
@@ -345,19 +353,26 @@ export default function Serie() {
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                     {editOptions.map((opt, i) => (
                                         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                            <span style={{ minWidth: '30px', fontWeight: 'bold', color: i === 0 ? '#10b981' : '#f43f5e' }}>
+                                            <input 
+                                                type="radio" 
+                                                name="correctIndex" 
+                                                checked={opt.isCorrect} 
+                                                onChange={() => setEditOptions(editOptions.map((o, idx) => ({ ...o, isCorrect: idx === i })))} 
+                                                title="اجعل هذا الخيار هو الإجابة الصحيحة"
+                                            />
+                                            <span style={{ minWidth: '30px', fontWeight: 'bold', color: opt.isCorrect ? '#10b981' : '#f43f5e' }}>
                                                 {['أ', 'ب', 'ج', 'د', 'هـ', 'و'][i] || i + 1}
                                             </span>
                                             <input 
                                                 type="text"
-                                                value={opt}
+                                                value={opt.text}
                                                 onChange={(e) => {
                                                     const newOpts = [...editOptions];
-                                                    newOpts[i] = e.target.value;
+                                                    newOpts[i].text = e.target.value;
                                                     setEditOptions(newOpts);
                                                 }}
-                                                style={{ flex: 1, padding: '10px', border: '1px solid #ccc', borderRadius: '8px', borderRight: i === 0 ? '4px solid #10b981' : '4px solid #f43f5e' }}
-                                                placeholder={i === 0 ? 'الإجابة الصحيحة...' : 'إجابة خاطئة...'}
+                                                style={{ flex: 1, padding: '10px', border: '1px solid #ccc', borderRadius: '8px', borderRight: opt.isCorrect ? '4px solid #10b981' : '4px solid #f43f5e' }}
+                                                placeholder={opt.isCorrect ? 'الإجابة الصحيحة...' : 'إجابة خاطئة...'}
                                             />
                                             {editOptions.length > 1 && (
                                                 <button 

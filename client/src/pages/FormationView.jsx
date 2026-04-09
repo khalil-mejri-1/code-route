@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import Navbar from '../comp/navbar';
 import axios from 'axios';
 import { API_BASE_URL, IMGBB_API_KEY, IMGBB_UPLOAD_URL } from '../config';
-import { ChevronRight, ChevronLeft, Image as ImageIcon, Plus, Trash2, Save, X, UploadCloud } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Image as ImageIcon, Plus, Trash2, Save, X, UploadCloud, Smartphone } from 'lucide-react';
 
 export default function FormationView() {
     const location = useLocation();
@@ -232,28 +232,39 @@ export default function FormationView() {
                              </div>
                         </div>
 
+                        {/* Mobile Rotate Message */}
+                        <div className="hide-on-desktop" style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                            background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', padding: '10px 20px',
+                            borderRadius: '12px', marginBottom: '15px', fontWeight: 'bold'
+                        }}>
+                            <Smartphone size={20} style={{ transform: 'rotate(90deg)' }} />
+                            يرجى تدوير الهاتف يميناً لتحسين جودة القراءة
+                        </div>
+
                         {/* Carousel Container */}
-                        <div style={{ 
+                        <div className="formation-carousel-container" style={{ 
                             position: 'relative', 
                             background: 'var(--bg-card)', 
                             borderRadius: '30px', 
                             overflow: 'hidden', 
                             border: '1px solid var(--glass-border)',
                             boxShadow: '0 30px 60px rgba(0,0,0,0.4)',
-                            minHeight: '400px',
+                            height: '75vh',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center'
                         }}>
                             {/* Controls */}
                             <button 
-                                onClick={prevSlide} 
-                                disabled={currentIndex === 0}
+                                className="formation-nav-btn left"
+                                onClick={nextSlide} 
+                                disabled={currentIndex === images.length - 1}
                                 style={{ 
                                     position: 'absolute', left: '20px', top: '50%', transform: 'translateY(-50%)',
                                     background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none', borderRadius: '50%',
                                     width: '50px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    cursor: currentIndex === 0 ? 'not-allowed' : 'pointer', zIndex: 5, opacity: currentIndex === 0 ? 0.2 : 1,
+                                    cursor: currentIndex === images.length - 1 ? 'not-allowed' : 'pointer', zIndex: 5, opacity: currentIndex === images.length - 1 ? 0.2 : 1,
                                     transition: 'all 0.3s'
                                 }}
                             >
@@ -261,13 +272,14 @@ export default function FormationView() {
                             </button>
 
                             <button 
-                                onClick={nextSlide} 
-                                disabled={currentIndex === images.length - 1}
+                                className="formation-nav-btn right"
+                                onClick={prevSlide} 
+                                disabled={currentIndex === 0}
                                 style={{ 
                                     position: 'absolute', right: '20px', top: '50%', transform: 'translateY(-50%)',
                                     background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none', borderRadius: '50%',
                                     width: '50px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    cursor: currentIndex === images.length - 1 ? 'not-allowed' : 'pointer', zIndex: 5, opacity: currentIndex === images.length - 1 ? 0.2 : 1,
+                                    cursor: currentIndex === 0 ? 'not-allowed' : 'pointer', zIndex: 5, opacity: currentIndex === 0 ? 0.2 : 1,
                                     transition: 'all 0.3s'
                                 }}
                             >
@@ -275,17 +287,21 @@ export default function FormationView() {
                             </button>
 
                             {/* Image Wrapper */}
-                            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+                            {/* Image Wrapper */}
+                            <div className="formation-image-wrapper" style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'stretch', justifyContent: 'stretch', padding: '20px' }}>
                                 <img 
                                     key={currentIndex}
                                     src={images[currentIndex]} 
                                     alt={`Formation ${currentIndex + 1}`} 
-                                    className="reveal-anim"
+                                    className="reveal-anim formation-image"
                                     style={{ 
-                                        maxWidth: '100%', 
-                                        maxHeight: '70vh', 
+                                        width: '100%', 
+                                        height: '100%', 
+                                        objectFit: 'fill',
                                         borderRadius: '15px',
-                                        boxShadow: '0 10px 30px rgba(0,0,0,0.2)'
+                                        boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
+                                        border: '3px solid #000',
+                                        boxSizing: 'border-box'
                                     }} 
                                 />
                             </div>
@@ -345,6 +361,58 @@ export default function FormationView() {
                 }
                 @keyframes spin {
                     to { transform: rotate(360deg); }
+                }
+
+                .hide-on-desktop {
+                    display: none !important;
+                }
+
+                @media (max-width: 768px) {
+                    .hide-on-desktop {
+                        display: flex !important;
+                    }
+                    .formation-carousel-container {
+                        border-radius: 0 !important;
+                        border-left: none !important;
+                        border-right: none !important;
+                        margin-left: -20px !important;
+                        margin-right: -20px !important;
+                        width: calc(100% + 40px) !important;
+                        height: 90vh !important;
+                    }
+                    .formation-image-wrapper {
+                        padding: 0 !important;
+                        position: relative;
+                        overflow: hidden;
+                    }
+                    .formation-image {
+                        border-radius: 0 !important;
+                        position: absolute;
+                        top: 50%;
+                        left: 50%;
+                        width: 90vh !important;
+                        height: 100vw !important;
+                        object-fit: fill !important;
+                        transform: translate(-50%, -50%) rotate(90deg) !important;
+                        transform-origin: center center;
+                    }
+                    .formation-nav-btn {
+                        width: 45px !important;
+                        height: 45px !important;
+                        border-radius: 50% !important;
+                    }
+                    .formation-nav-btn.left {
+                        top: 15px !important;
+                        left: 50% !important;
+                        transform: translateX(-50%) rotate(90deg) !important;
+                    }
+                    .formation-nav-btn.right {
+                        bottom: 15px !important;
+                        top: auto !important;
+                        right: auto !important;
+                        left: 50% !important;
+                        transform: translateX(-50%) rotate(90deg) !important;
+                    }
                 }
             `}</style>
         </div>
