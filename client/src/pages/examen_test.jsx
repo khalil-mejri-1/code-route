@@ -286,7 +286,7 @@ export default function Examen_test() {
                         )}
                     </div>
                     <div className="quiz-nav-premium">
-                        <button className="signup-button" onClick={() => navigateToQuestion(currentQuestionIndex - 1)} disabled={currentQuestionIndex === 0}><ChevronRight /> السابق</button>
+                        <button className="signup-button" onClick={() => navigateToQuestion(currentQuestionIndex - 1)} disabled={currentQuestionIndex === 0}><ChevronRight /></button>
                         <button className="btn-premium" onClick={() => navigateToQuestion(currentQuestionIndex + 1)} disabled={currentQuestionIndex >= visibleQuestionCount - 1}>التالي <ChevronLeft /></button>
                     </div>
                 </main>

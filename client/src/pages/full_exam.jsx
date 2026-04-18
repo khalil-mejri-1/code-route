@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { API_BASE_URL, IMGBB_API_KEY, IMGBB_UPLOAD_URL } from '../config';
+import bg from "../image/bg.png";
 import {
     ChevronRight,
     ChevronLeft,
@@ -57,6 +58,11 @@ export default function FullExam() {
     const [editImageFile, setEditImageFile] = useState(null);
     const [editPreviewUrl, setEditPreviewUrl] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
+    const [timeLeft, setTimeLeft] = useState(50);
+    const [isExamFinished, setIsExamFinished] = useState(false);
+    const [isReviewMode, setIsReviewMode] = useState(false);
+    const [userChoices, setUserChoices] = useState([]);
+    const [reviewIndices, setReviewIndices] = useState([]);
 
     const isSubscribed = localStorage.getItem('subscriptions') === 'true';
 
@@ -91,6 +97,7 @@ export default function FullExam() {
                 if (response.data && response.data.length > 0) {
                     setQuizData(response.data);
                     setUserAnswersHistory(Array(response.data.length).fill(null));
+                    setUserChoices(Array(response.data.length).fill(null));
                     sessionStorage.setItem(cacheKey, JSON.stringify(response.data));
                 } else {
                     setError('لا توجد أسئلة متاحة لهذا الاختبار.');
@@ -116,6 +123,11 @@ export default function FullExam() {
         }
     }, [quizData]);
 
+    const totalQuestions = quizData.length;
+    const visibleCount = isSubscribed ? totalQuestions : Math.min(totalQuestions, FREE_TRIAL_LIMIT);
+    const isLocked = !isSubscribed && currentQuestionIndex >= FREE_TRIAL_LIMIT;
+    const currentQuestion = quizData[currentQuestionIndex];
+
     useEffect(() => {
         if (currentQuestion) {
             const img = new Image();
@@ -130,10 +142,29 @@ export default function FullExam() {
         }
     }, [currentQuestionIndex]);
 
-    const totalQuestions = quizData.length;
-    const visibleCount = isSubscribed ? totalQuestions : Math.min(totalQuestions, FREE_TRIAL_LIMIT);
-    const isLocked = !isSubscribed && currentQuestionIndex >= FREE_TRIAL_LIMIT;
-    const currentQuestion = quizData[currentQuestionIndex];
+    useEffect(() => {
+        if (isLocked || showAnswer || isExamFinished || isReviewMode) return;
+
+        if (timeLeft <= 0) {
+            // Mark as wrong if time runs out
+            const newHistory = [...userAnswersHistory];
+            newHistory[currentQuestionIndex] = false;
+            setUserAnswersHistory(newHistory);
+
+            if (currentQuestionIndex < visibleCount - 1) {
+                navigateTo(currentQuestionIndex + 1);
+            } else {
+                setIsExamFinished(true);
+            }
+            return;
+        }
+
+        const timer = setInterval(() => {
+            setTimeLeft(prev => prev - 1);
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [timeLeft, currentQuestionIndex, isLocked, showAnswer, isExamFinished, visibleCount]);
 
     const uploadToImgBB = async (file) => {
         const base64 = await new Promise((resolve, reject) => {
@@ -182,7 +213,7 @@ export default function FullExam() {
         try {
             let imageUrl = currentQuestion.image;
             if (editImageFile) imageUrl = await uploadToImgBB(editImageFile);
-            
+
             const options = editOptions;
 
             await axios.put(`${API_BASE_URL}/questions/${currentQuestion._id}`, {
@@ -218,18 +249,67 @@ export default function FullExam() {
 
     const handleReveal = () => {
         if (selectedAnswer === null || showAnswer || isLocked) return;
+
+        // Save the answer choice
         const isCorrect = currentQuestion.options[selectedAnswer].isCorrect;
         const newHistory = [...userAnswersHistory];
         newHistory[currentQuestionIndex] = isCorrect;
         setUserAnswersHistory(newHistory);
-        setShowAnswer(true);
+
+        const newChoices = [...userChoices];
+        newChoices[currentQuestionIndex] = selectedAnswer;
+        setUserChoices(newChoices);
+
+        // Move to next or finish
+        if (currentQuestionIndex < visibleCount - 1) {
+            navigateTo(currentQuestionIndex + 1, false);
+        } else {
+            setIsExamFinished(true);
+        }
     };
 
-    const navigateTo = (idx) => {
+    const navigateTo = (idx, fromManual = true) => {
+        if (isReviewMode) {
+            // Find current position in reviewIndices
+            const currentReviewIdx = reviewIndices.indexOf(currentQuestionIndex);
+            let nextReviewIdx = -1;
+
+            if (idx > currentQuestionIndex) {
+                // Moving forward
+                if (currentReviewIdx < reviewIndices.length - 1) {
+                    nextReviewIdx = reviewIndices[currentReviewIdx + 1];
+                }
+            } else if (idx < currentQuestionIndex) {
+                // Moving backward
+                if (currentReviewIdx > 0) {
+                    nextReviewIdx = reviewIndices[currentReviewIdx - 1];
+                }
+            }
+
+            if (nextReviewIdx !== -1) {
+                setCurrentQuestionIndex(nextReviewIdx);
+                setTimeLeft(50);
+                setImageLoading(true);
+                setSelectedAnswer(userChoices[nextReviewIdx]);
+                setShowAnswer(true);
+            }
+            return;
+        }
+
         if (idx < 0 || idx >= totalQuestions) return;
         if (!isSubscribed && idx >= FREE_TRIAL_LIMIT) return;
+
+        // If passing without answer MANUALLY, mark as wrong
+        if (fromManual && !isReviewMode && !isExamFinished && userAnswersHistory[currentQuestionIndex] === null) {
+            const newHistory = [...userAnswersHistory];
+            newHistory[currentQuestionIndex] = false;
+            setUserAnswersHistory(newHistory);
+        }
+
         setCurrentQuestionIndex(idx);
+        setTimeLeft(50); // Reset timer immediately upon navigation
         setImageLoading(true);
+        
         const status = userAnswersHistory[idx];
         if (status !== null) {
             const correctIdx = quizData[idx].options.findIndex(o => o.isCorrect);
@@ -264,6 +344,47 @@ export default function FullExam() {
 
     const selectedLetter = selectedAnswer !== null ? ['أ', 'ب', 'ج'][selectedAnswer] : '?';
 
+    if (isExamFinished) {
+        return (
+            <div className="exam-results-page" style={{ backgroundImage: `url(${bg})` }}>
+                <div className="custom-results-card">
+                    <div className={`score-main-value ${correctCount >= 24 ? 'status-pass' : 'status-fail'}`}>
+                        {correctCount}
+                    </div>
+                    <div className="score-separator-yellow"></div>
+                    <div className="score-total-value">
+                        {totalQuestions}
+                    </div>
+
+                    <div className={`exam-status-text ${correctCount >= 24 ? 'status-pass' : 'status-fail'}`}>
+                        {correctCount >= 24 ? 'مقبول' : 'مؤجل'}
+                    </div>
+
+                    <div className="custom-results-actions">
+                        <button className="btn-custom-result restart-yellow" onClick={() => window.location.reload()}>إعادة المحاولة</button>
+                        <button className="btn-custom-result correction-blue" onClick={() => {
+                            const wrongs = userAnswersHistory
+                                .map((status, idx) => status === false ? idx : null)
+                                .filter(idx => idx !== null);
+                            
+                            if (wrongs.length > 0) {
+                                setReviewIndices(wrongs);
+                                setIsExamFinished(false);
+                                setIsReviewMode(true);
+                                setCurrentQuestionIndex(wrongs[0]);
+                                setSelectedAnswer(userChoices[wrongs[0]]);
+                                setShowAnswer(true);
+                            } else {
+                                alert("لم تقم بأي أخطاء! أحسنت.");
+                            }
+                        }}>إصلاح</button>
+                        <button className="btn-custom-result exit-white" onClick={() => navigate(-1)}>خروج</button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="serie-classic-wrapper">
             <div className="classic-top-bar">
@@ -271,10 +392,9 @@ export default function FullExam() {
                     <button className="btn-classic-back" onClick={() => navigate(-1)}>
                         <ChevronRight size={18} /> رجوع
                     </button>
-                    <span>الاختبار الشامل - فئة {category1}</span>
+                    <span style={{ fontSize: '14px', fontWeight: 'bold' }}>الاختبار الشامل - فئة {category1}</span>
                 </div>
                 <span style={{ fontWeight: 'bold' }}>codedelaroute.tn</span>
-                <span>{answeredCount} / {totalQuestions} سؤال</span>
             </div>
 
             {showEditModal && (
@@ -284,13 +404,13 @@ export default function FullExam() {
                             <X size={28} />
                         </button>
                         <h2 style={{ fontSize: '22px', marginBottom: '25px', color: '#3b5998', textAlign: 'center' }}>🛠️ تعديل محتوى السؤال</h2>
-                        
+
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                             <div className="classic-edit-row">
                                 <div style={{ flex: 1 }}>
                                     <label style={{ display: 'block', marginBottom: '8px', fontWeight: 700, color: '#3b5998' }}>السؤال</label>
-                                    <textarea 
-                                        value={editQuestion} 
+                                    <textarea
+                                        value={editQuestion}
                                         onChange={(e) => setEditQuestion(e.target.value)}
                                         rows="3"
                                         style={{ width: '100%', border: '1px solid #ccc', borderRadius: '8px', padding: '12px', fontSize: '16px' }}
@@ -317,8 +437,8 @@ export default function FullExam() {
                             <div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                                     <label style={{ margin: 0, fontWeight: 700, color: '#3b5998' }}>خيارات الإجابة (حدد الإجابة الصحيحة)</label>
-                                    <button 
-                                        type="button" 
+                                    <button
+                                        type="button"
                                         onClick={handleAddOption}
                                         style={{ background: '#10b981', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 12px', fontSize: '14px', cursor: 'pointer' }}
                                     >
@@ -328,17 +448,17 @@ export default function FullExam() {
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                     {editOptions.map((opt, i) => (
                                         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                            <input 
-                                                type="radio" 
-                                                name="correctIndexFull" 
-                                                checked={opt.isCorrect} 
-                                                onChange={() => setEditOptions(editOptions.map((o, idx) => ({ ...o, isCorrect: idx === i })))} 
+                                            <input
+                                                type="radio"
+                                                name="correctIndexFull"
+                                                checked={opt.isCorrect}
+                                                onChange={() => setEditOptions(editOptions.map((o, idx) => ({ ...o, isCorrect: idx === i })))}
                                                 title="اجعل هذا الخيار هو الإجابة الصحيحة"
                                             />
                                             <span style={{ minWidth: '30px', fontWeight: 'bold', color: opt.isCorrect ? '#10b981' : '#f43f5e' }}>
                                                 {['أ', 'ب', 'ج', 'د', 'هـ', 'و'][i] || i + 1}
                                             </span>
-                                            <input 
+                                            <input
                                                 type="text"
                                                 value={opt.text}
                                                 onChange={(e) => {
@@ -350,8 +470,8 @@ export default function FullExam() {
                                                 placeholder={opt.isCorrect ? 'الإجابة الصحيحة...' : 'إجابة خاطئة...'}
                                             />
                                             {editOptions.length > 1 && (
-                                                <button 
-                                                    type="button" 
+                                                <button
+                                                    type="button"
                                                     onClick={() => handleRemoveOption(i)}
                                                     style={{ background: '#f43f5e', color: 'white', border: 'none', borderRadius: '4px', padding: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
                                                 >
@@ -374,24 +494,40 @@ export default function FullExam() {
             <div className="classic-main-container">
                 <div className="classic-blue-section">
                     {/* Numbers sidebar (Visual Right in RTL, last in JSX) */}
-                    <div className="classic-numbers-sidebar">
-                        <div className="classic-numbers-header">أسئلة الاختبار</div>
-                        <div className="classic-numbers-grid" ref={scrollRef}>
-                            {quizData.map((_, i) => {
-                                const h = userAnswersHistory[i];
-                                const locked = !isSubscribed && i >= FREE_TRIAL_LIMIT;
-                                return (
-                                    <div
-                                        key={i}
-                                        className={`classic-number-row ${i === currentQuestionIndex ? 'active' : ''}`}
-                                        onClick={() => !locked && navigateTo(i)}
-                                        style={h !== null ? { color: h ? '#10b981' : '#f43f5e', fontWeight: 'bold' } : locked ? { opacity: 0.3 } : {}}
-                                    >
-                                        <span>{i + 1}</span>
-                                        {locked && <Lock size={10} />}
-                                    </div>
-                                );
-                            })}
+                    {/* Right side Metadata (stacked on desktop, split on mobile via CSS) */}
+                    <div className="classic-right-meta-sidebar">
+                        {/* Question Number */}
+                        <div className="classic-qnum-sidebar">
+                            <div className="classic-question-number-display">
+                                {/* Flag added here inside the display container */}
+                                <img 
+                                    src="https://www.atlas-monde.net/wp-content/uploads/2017/03/drapeau-tunisie.png" 
+                                    alt="Tunisia Flag" 
+                                    style={{ width: '35px', marginBottom: '8px', borderRadius: '2px' }}
+                                />
+                                <div className="q-label-ar">السؤال عدد</div>
+                                <div className="q-number-box">
+                                    {currentQuestionIndex + 1}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Timer */}
+                        <div className="classic-timer-sidebar">
+                            <div className="classic-timer-wrapper">
+                                <div className="classic-timer-bar-container">
+                                    {[...Array(50)].map((_, i) => (
+                                        <div
+                                            key={i}
+                                            className={`classic-timer-segment ${i < timeLeft ? 'active' : ''}`}
+                                        />
+                                    ))}
+                                </div>
+                                <div className="classic-timer-number">
+                                    {timeLeft}
+                                </div>
+                                <div className="classic-timer-text">Chronomètre</div>
+                            </div>
                         </div>
                     </div>
 
@@ -406,20 +542,20 @@ export default function FullExam() {
                         ) : (
                             <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', justifyContent: 'center' }}>
                                 {imageLoading && (
-                                    <div style={{ 
-                                        position: 'absolute', 
-                                        top: 0, left: 0, right: 0, bottom: 0, 
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center', 
-                                        background: '#f9f9f9', zIndex: 10, fontSize: '18px', color: '#3b5998' 
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: 0, left: 0, right: 0, bottom: 0,
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        background: '#f9f9f9', zIndex: 10, fontSize: '18px', color: '#3b5998'
                                     }}>
                                         جاري تحميل الصورة...
                                     </div>
                                 )}
-                                <img 
+                                <img
                                     key={currentQuestion.image}
-                                    src={currentQuestion.image} 
-                                    onLoad={() => setImageLoading(false)} 
-                                    alt="Exam" 
+                                    src={currentQuestion.image}
+                                    onLoad={() => setImageLoading(false)}
+                                    alt="Exam"
                                 />
                             </div>
                         )}
@@ -428,25 +564,18 @@ export default function FullExam() {
                     {/* Answer Box (Visual Left in RTL, first in JSX) */}
                     <div className="classic-answer-sidebar">
                         <h4>اجابتك هي</h4>
-                        <p style={{ margin: '0 0 10px' }}>Votre réponse</p>
-                        <div className="classic-answer-box">
+                        <div className="classic-answer-box" style={{
+                            backgroundColor: selectedAnswer === 0 ? '#ff5252' : // Red
+                                            selectedAnswer === 1 ? '#ffd740' : // Yellow
+                                            selectedAnswer === 2 ? '#69f0ae' : // Green
+                                            '#fff',
+                            color: (selectedAnswer === 1) ? '#000' : // Black text for yellow
+                                   (selectedAnswer !== null) ? '#fff' : '#3b5998', // White for others, blue for ?
+                            transition: 'all 0.3s ease'
+                        }}>
                             {selectedLetter}
                         </div>
                         <div className="classic-metadata">
-                            <div style={{ color: '#10b981', fontWeight: 'bold', fontSize: '14px' }}>الصح: {correctCount}</div>
-                            <button 
-                                onClick={openEditModal} 
-                                className="btn-edit-classic"
-                            >
-                                تعديل السؤال
-                            </button>
-                            <button 
-                                onClick={() => navigate(`/formation?category=${encodeURIComponent(category1)}`)} 
-                                className="btn-edit-classic"
-                                style={{ marginTop: '10px', background: '#10b981' }}
-                            >
-                                تكوين
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -454,47 +583,87 @@ export default function FullExam() {
                 <div className="classic-bottom-section">
                     {!isLocked && (
                         <div className="classic-question-area">
-                            <div style={{ 
-                                display: 'inline-block', 
-                                background: '#3b5998', 
-                                color: 'white', 
-                                padding: '4px 12px', 
-                                borderRadius: '4px', 
-                                fontSize: '12px', 
-                                marginBottom: '15px', 
-                                fontWeight: 'bold', 
-                                alignSelf: 'center' 
-                            }}>
-                                فئة السؤال: {currentQuestion?.category1} {currentQuestion?.category2 ? `(${currentQuestion.category2})` : ''}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '15px', justifyContent: 'center' }}>
+                                <div style={{
+                                    background: '#3b5998',
+                                    color: 'white',
+                                    padding: '4px 12px',
+                                    borderRadius: '4px',
+                                    fontSize: '12px',
+                                    fontWeight: 'bold',
+                                }}>
+                                    فئة السؤال: {currentQuestion?.category1} {currentQuestion?.category2 ? `(${currentQuestion.category2})` : ''}
+                                </div>
+                                <button
+                                    onClick={openEditModal}
+                                    className="btn-edit-classic"
+                                    style={{ margin: 0 }}
+                                >
+                                    تعديل السؤال
+                                </button>
+                                <button
+                                    onClick={() => navigate(`/formation?category=${encodeURIComponent(category1)}`)}
+                                    className="btn-edit-classic"
+                                    style={{ margin: 0, background: '#10b981', color: 'white' }}
+                                >
+                                    تكوين
+                                </button>
                             </div>
                             <h1 className="classic-question-text">{currentQuestion.question}</h1>
-                            
+
                             <div className="classic-options-container">
-                                {currentQuestion.options.map((opt, i) => (
-                                    <div key={i} className={`classic-option-item ${showAnswer && opt.isCorrect ? 'option-correct' : ''}`} onClick={() => handleAnswerClick(i)}>
-                                        <div className={`classic-option-box ${['option-a', 'option-b', 'option-c'][i]}`}>
-                                            {['أ', 'ب', 'ج'][i]}
+                                {currentQuestion.options.map((opt, i) => {
+                                    const isCorrect = opt.isCorrect;
+                                    const isUserChoice = userChoices[currentQuestionIndex] === i;
+                                    
+                                    let optionBoxClass = "";
+                                    if (isReviewMode) {
+                                        if (isCorrect) optionBoxClass = "review-correct-box";
+                                        else if (isUserChoice && !isCorrect) optionBoxClass = "review-incorrect-box";
+                                    } else if (selectedAnswer === i) {
+                                        optionBoxClass = "option-selected-box";
+                                    }
+
+                                    return (
+                                        <div key={i} className={`classic-option-item`} onClick={() => !isReviewMode && handleAnswerClick(i)}>
+                                            <div className={`classic-option-box ${['option-a', 'option-b', 'option-c'][i]} ${optionBoxClass}`}>
+                                                {['أ', 'ب', 'ج'][i]}
+                                            </div>
+                                            <div className="classic-option-text" style={
+                                                isReviewMode 
+                                                    ? (isCorrect ? { color: '#10b981' } : (isUserChoice ? { color: '#f43f5e' } : {}))
+                                                    : (selectedAnswer === i ? { color: '#3b5998', textDecoration: 'underline' } : {})
+                                            }>
+                                                {opt.text}
+                                            </div>
                                         </div>
-                                        <div className="classic-option-text" style={showAnswer && opt.isCorrect ? { color: '#10b981' } : {}}>{opt.text}</div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </div>
                     )}
 
                     <div className="classic-controls-wrapper">
                         <div className="classic-controls">
-                            <button className="btn-classic" onClick={() => navigateTo(currentQuestionIndex - 1)} disabled={currentQuestionIndex === 0}>
-                                السابق
+                            <button 
+                                className="btn-classic" 
+                                onClick={() => navigateTo(currentQuestionIndex - 1)} 
+                                disabled={isReviewMode ? reviewIndices.indexOf(currentQuestionIndex) === 0 : currentQuestionIndex === 0}
+                            >
+                                <ChevronRight size={24} />
                             </button>
-                            
+
                             {!showAnswer && !isLocked && (
                                 <button className="btn-classic" onClick={handleReveal} disabled={selectedAnswer === null} style={{ background: '#3b5998', color: 'white', borderColor: '#3b5998' }}>
                                     تأكيد الإجابة
                                 </button>
                             )}
 
-                            <button className="btn-classic" onClick={() => navigateTo(currentQuestionIndex + 1)} disabled={currentQuestionIndex >= visibleCount - 1}>
+                            <button 
+                                className="btn-classic" 
+                                onClick={() => navigateTo(currentQuestionIndex + 1)} 
+                                disabled={isReviewMode ? reviewIndices.indexOf(currentQuestionIndex) >= reviewIndices.length - 1 : currentQuestionIndex >= visibleCount - 1}
+                            >
                                 التالي
                             </button>
                         </div>

@@ -1,31 +1,30 @@
 import React, { useState, useEffect, useRef } from 'react';
-import Navbar from '../comp/navbar';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { API_BASE_URL, IMGBB_API_KEY, IMGBB_UPLOAD_URL } from '../config';
+import bg from "../image/bg.png";
 import {
     ChevronRight,
     ChevronLeft,
     CheckCircle,
     XCircle,
     Lock,
-    Trash2,
-    Edit3,
-    Trophy,
-    ArrowRight,
-    FileText,
+    Settings,
+    Award,
     UploadCloud,
-    Check,
-    X
+    X,
+    Trash2,
+    Trophy,
+    Shuffle
 } from 'lucide-react';
 import './SerieClassic.css';
 
-const API_URL = `${API_BASE_URL}/quiz/questions`;
 const FREE_TRIAL_LIMIT = 3;
 
 const parseCategoryParam = (param) => {
     if (!param) return { category1: '', category2: '' };
-    const parts = param.split(' / ').map(p => p.trim()).filter(p => p.length > 0);
+    if (!param.includes(' / ')) return { category1: param.trim(), category2: '' };
+    const parts = param.split(' / ').map(p => p.trim());
     let category1 = '', category2 = '';
     if (parts.length >= 3) {
         category1 = parts.slice(0, 2).join(' / ');
@@ -35,7 +34,6 @@ const parseCategoryParam = (param) => {
         category2 = parts[1];
     } else {
         category1 = parts[0] || '';
-        category2 = '';
     }
     return { category1, category2 };
 };
@@ -49,76 +47,95 @@ export default function Serie() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-    const [showEditModal, setShowEditModal] = useState(false);
+    const [selectedAnswer, setSelectedAnswer] = useState(null);
+    const [showAnswer, setShowAnswer] = useState(false);
+    const [userAnswersHistory, setUserAnswersHistory] = useState([]);
     const [imageLoading, setImageLoading] = useState(true);
-
-    const [selectedLetter, setSelectedLetter] = useState('?');
-    const [deleteMode, setDeleteMode] = useState(false);
-    const [selectedIndices, setSelectedIndices] = useState([]);
-    const [isDeleting, setIsDeleting] = useState(false);
+    const [showEditModal, setShowEditModal] = useState(false);
 
     const [editQuestion, setEditQuestion] = useState('');
     const [editOptions, setEditOptions] = useState([{ text: '', isCorrect: true }, { text: '', isCorrect: false }, { text: '', isCorrect: false }]);
     const [editImageFile, setEditImageFile] = useState(null);
     const [editPreviewUrl, setEditPreviewUrl] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
+    const [timeLeft, setTimeLeft] = useState(50);
+    const [isExamFinished, setIsExamFinished] = useState(false);
+    const [isReviewMode, setIsReviewMode] = useState(false);
+    const [userChoices, setUserChoices] = useState([]);
+    const [reviewIndices, setReviewIndices] = useState([]);
 
     const isSubscribed = localStorage.getItem('subscriptions') === 'true';
-    const currentQuestion = quizData[currentQuestionIndex];
-    const totalQuestions = quizData.length;
-    const visibleLessonCount = isSubscribed ? totalQuestions : FREE_TRIAL_LIMIT;
+
+    const urlParams = new URLSearchParams(location.search);
+    const categoryParam = urlParams.get('category');
+    const nbSerieParam = urlParams.get('nb_serie') || '1';
+    const { category1, category2 } = parseCategoryParam(categoryParam || '');
 
     useEffect(() => {
         const fetchQuestions = async () => {
-            setLoading(true);
-            setError(null);
-            const urlParams = new URLSearchParams(location.search);
-            const rawCategoryParam = urlParams.get('category');
-            const nbSerieParam = urlParams.get('nb_serie') || '1';
-            const { category1, category2 } = parseCategoryParam(rawCategoryParam || '');
-
             if (!category1) {
                 setLoading(false);
                 return setError('الرابط غير مكتمل.');
             }
 
+            const cacheKey = `serie_session_v1_${category1}_${category2}_${nbSerieParam}`;
+            const cachedData = sessionStorage.getItem(cacheKey);
+
+            if (cachedData) {
+                try {
+                    const parsedData = JSON.parse(cachedData);
+                    setQuizData(parsedData);
+                    setUserAnswersHistory(Array(parsedData.length).fill(null));
+                    setLoading(false);
+                    return;
+                } catch (e) {
+                    console.error("Failed to parse cached serie data", e);
+                }
+            }
+
+            setLoading(true);
+            setError(null);
             try {
-                const response = await axios.get(API_URL, {
+                const response = await axios.get(`${API_BASE_URL}/quiz/questions`, {
                     params: {
-                        category1: category1,
-                        category2: category2,
+                        category1,
+                        category2,
                         nb_serie: parseInt(nbSerieParam),
                     }
                 });
                 if (response.data && response.data.length > 0) {
                     setQuizData(response.data);
-                    setCurrentQuestionIndex(0);
-                    setImageLoading(true);
-                    setDeleteMode(false);
-                    setSelectedIndices([]);
-                    setSelectedLetter('?');
+                    setUserAnswersHistory(Array(response.data.length).fill(null));
+                    setUserChoices(Array(response.data.length).fill(null));
+                    sessionStorage.setItem(cacheKey, JSON.stringify(response.data));
                 } else {
-                    setQuizData([]);
                     setError(`لم يتم العثور على دروس للفئة المحددة.`);
                 }
             } catch (err) {
-                console.error("Fetch Error:", err);
+                console.error(err);
                 setError('فشل جلب البيانات. تأكد من اتصال الخادم.');
             } finally {
                 setLoading(false);
             }
         };
         fetchQuestions();
-    }, [location.search]);
+    }, [location.search, category1, category2, nbSerieParam]);
 
     useEffect(() => {
         if (quizData.length > 0) {
             quizData.forEach(q => {
-                const img = new Image();
-                img.src = q.image;
+                if (q.image) {
+                    const img = new Image();
+                    img.src = q.image;
+                }
             });
         }
     }, [quizData]);
+
+    const totalQuestions = quizData.length;
+    const visibleCount = isSubscribed ? totalQuestions : Math.min(totalQuestions, FREE_TRIAL_LIMIT);
+    const isLocked = !isSubscribed && currentQuestionIndex >= FREE_TRIAL_LIMIT;
+    const currentQuestion = quizData[currentQuestionIndex];
 
     useEffect(() => {
         if (currentQuestion) {
@@ -128,68 +145,35 @@ export default function Serie() {
                 setImageLoading(false);
             } else {
                 setImageLoading(true);
-                // Fallback: don't stay stuck forever
                 const timer = setTimeout(() => setImageLoading(false), 2000);
                 return () => clearTimeout(timer);
             }
         }
     }, [currentQuestionIndex]);
 
-    const handleNext = () => {
-        if (currentQuestionIndex < visibleLessonCount - 1) {
-            setImageLoading(true);
-            setCurrentQuestionIndex(currentQuestionIndex + 1);
-            setSelectedLetter('?');
-        }
-    };
+    useEffect(() => {
+        if (isLocked || showAnswer || isExamFinished || isReviewMode) return;
 
-    const handlePrev = () => {
-        if (currentQuestionIndex > 0) {
-            setImageLoading(true);
-            setCurrentQuestionIndex(currentQuestionIndex - 1);
-            setSelectedLetter('?');
-        }
-    };
+        if (timeLeft <= 0) {
+            // Mark as wrong if time runs out
+            const newHistory = [...userAnswersHistory];
+            newHistory[currentQuestionIndex] = false;
+            setUserAnswersHistory(newHistory);
 
-    const handleJumpToQuestion = (index) => {
-        if (deleteMode) {
-            if (selectedIndices.includes(index)) {
-                setSelectedIndices(selectedIndices.filter(i => i !== index));
+            if (currentQuestionIndex < visibleCount - 1) {
+                navigateTo(currentQuestionIndex + 1);
             } else {
-                setSelectedIndices([...selectedIndices, index]);
+                setIsExamFinished(true);
             }
-        } else {
-            if (index >= 0 && index < visibleLessonCount) {
-                setImageLoading(true);
-                setCurrentQuestionIndex(index);
-                setSelectedLetter('?');
-            }
+            return;
         }
-    };
 
-    const handleBatchDelete = async () => {
-        if (selectedIndices.length === 0) return alert('يرجى اختيار درس للحذف.');
-        if (!window.confirm(`⚠️ هل أنت متأكد من حذف ${selectedIndices.length} درس؟`)) return;
+        const timer = setInterval(() => {
+            setTimeLeft(prev => prev - 1);
+        }, 1000);
 
-        setIsDeleting(true);
-        try {
-            const idsToDelete = selectedIndices.map(idx => quizData[idx]._id);
-            await axios.post(`${API_BASE_URL}/questions/batch-delete`, { ids: idsToDelete });
-            alert(`✅ تم الحذف بنجاح!`);
-            const updatedData = quizData.filter((_, idx) => !selectedIndices.includes(idx));
-            setQuizData(updatedData);
-            setSelectedIndices([]);
-            setDeleteMode(false);
-            if (currentQuestionIndex >= updatedData.length) {
-                setCurrentQuestionIndex(Math.max(0, updatedData.length - 1));
-            }
-        } catch (err) {
-            console.error('Batch Delete Error:', err);
-            alert('❌ فشل الحذف الجماعي.');
-        } finally {
-            setIsDeleting(false);
-        }
-    };
+        return () => clearInterval(timer);
+    }, [timeLeft, currentQuestionIndex, isLocked, showAnswer, isExamFinished, visibleCount]);
 
     const uploadToImgBB = async (file) => {
         const base64 = await new Promise((resolve, reject) => {
@@ -238,6 +222,7 @@ export default function Serie() {
         try {
             let imageUrl = currentQuestion.image;
             if (editImageFile) imageUrl = await uploadToImgBB(editImageFile);
+
             const options = editOptions;
 
             await axios.put(`${API_BASE_URL}/questions/${currentQuestion._id}`, {
@@ -267,10 +252,89 @@ export default function Serie() {
         setShowEditModal(true);
     };
 
+    const handleAnswerClick = (idx) => {
+        if (!showAnswer && !isLocked) setSelectedAnswer(idx);
+    };
+
+    const handleReveal = () => {
+        if (selectedAnswer === null || showAnswer || isLocked) return;
+
+        // Save the answer choice
+        const isCorrect = currentQuestion.options[selectedAnswer].isCorrect;
+        const newHistory = [...userAnswersHistory];
+        newHistory[currentQuestionIndex] = isCorrect;
+        setUserAnswersHistory(newHistory);
+
+        const newChoices = [...userChoices];
+        newChoices[currentQuestionIndex] = selectedAnswer;
+        setUserChoices(newChoices);
+
+        // Move to next or finish
+        if (currentQuestionIndex < visibleCount - 1) {
+            navigateTo(currentQuestionIndex + 1, false);
+        } else {
+            setIsExamFinished(true);
+        }
+    };
+
+    const navigateTo = (idx, fromManual = true) => {
+        if (isReviewMode) {
+            const currentReviewIdx = reviewIndices.indexOf(currentQuestionIndex);
+            let nextReviewIdx = -1;
+
+            if (idx > currentQuestionIndex) {
+                if (currentReviewIdx < reviewIndices.length - 1) {
+                    nextReviewIdx = reviewIndices[currentReviewIdx + 1];
+                }
+            } else if (idx < currentQuestionIndex) {
+                if (currentReviewIdx > 0) {
+                    nextReviewIdx = reviewIndices[currentReviewIdx - 1];
+                }
+            }
+
+            if (nextReviewIdx !== -1) {
+                setCurrentQuestionIndex(nextReviewIdx);
+                setTimeLeft(50);
+                setImageLoading(true);
+                setSelectedAnswer(userChoices[nextReviewIdx]);
+                setShowAnswer(true);
+            }
+            return;
+        }
+
+        if (idx < 0 || idx >= totalQuestions) return;
+        if (!isSubscribed && idx >= FREE_TRIAL_LIMIT) return;
+
+        // If passing without answer MANUALLY, mark as wrong
+        if (fromManual && !isReviewMode && !isExamFinished && userAnswersHistory[currentQuestionIndex] === null) {
+            const newHistory = [...userAnswersHistory];
+            newHistory[currentQuestionIndex] = false;
+            setUserAnswersHistory(newHistory);
+        }
+
+        setCurrentQuestionIndex(idx);
+        setTimeLeft(50);
+        setImageLoading(true);
+        
+        const status = userAnswersHistory[idx];
+        if (status !== null) {
+            const correctIdx = quizData[idx].options.findIndex(o => o.isCorrect);
+            setSelectedAnswer(correctIdx);
+            setShowAnswer(true);
+        } else {
+            setSelectedAnswer(null);
+            setShowAnswer(false);
+        }
+    };
+
+    const correctCount = userAnswersHistory.filter(h => h === true).length;
+
     if (loading) {
         return (
             <div className='serie-classic-wrapper' style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ fontSize: '24px', fontWeight: 800, color: '#3b5998' }}>جاري تحميل الدروس... ✨</div>
+                <div style={{ fontSize: '24px', fontWeight: 800, color: '#3b5998', textAlign: 'center' }}>
+                    جاري تحميل السلسلة... ✨
+                </div>
             </div>
         );
     }
@@ -285,21 +349,55 @@ export default function Serie() {
         );
     }
 
-    const { category1: mainCategory, category2: currentTopic } = parseCategoryParam(new URLSearchParams(location.search).get('category') || '');
-    const isCurrentLessonLocked = !isSubscribed && currentQuestionIndex >= FREE_TRIAL_LIMIT;
+    const selectedLetter = selectedAnswer !== null ? ['أ', 'ب', 'ج'][selectedAnswer] : '?';
+
+    if (isExamFinished) {
+        return (
+            <div className="exam-results-page" style={{ backgroundImage: `url(${bg})` }}>
+                <div className="custom-results-card">
+                    <div className={`score-main-value ${correctCount >= (totalQuestions * 0.6) ? 'status-pass' : 'status-fail'}`}>{correctCount}</div>
+                    <div className="score-separator-yellow"></div>
+                    <div className="score-total-value">{totalQuestions}</div>
+
+                    <div className={`exam-status-text ${correctCount >= (totalQuestions * 0.6) ? 'status-pass' : 'status-fail'}`}>
+                        {correctCount >= (totalQuestions * 0.6) ? 'مقبول' : 'مؤجل'}
+                    </div>
+
+                    <div className="custom-results-actions">
+                        <button className="btn-custom-result restart-yellow" onClick={() => window.location.reload()}>إعادة المحاولة</button>
+                        <button className="btn-custom-result correction-blue" onClick={() => {
+                            const wrongs = userAnswersHistory
+                                .map((status, idx) => status === false ? idx : null)
+                                .filter(idx => idx !== null);
+                            
+                            if (wrongs.length > 0) {
+                                setReviewIndices(wrongs);
+                                setIsExamFinished(false);
+                                setIsReviewMode(true);
+                                setCurrentQuestionIndex(wrongs[0]);
+                                setSelectedAnswer(userChoices[wrongs[0]]);
+                                setShowAnswer(true);
+                            } else {
+                                alert("لم تقم بأي أخطاء! أحسنت.");
+                            }
+                        }}>إصلاح</button>
+                        <button className="btn-custom-result exit-white" onClick={() => navigate(-1)}>خروج</button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="serie-classic-wrapper">
-            {/* Top Bar matching image */}
             <div className="classic-top-bar">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                     <button className="btn-classic-back" onClick={() => navigate(-1)}>
                         <ChevronRight size={18} /> رجوع
                     </button>
-                    <span>{mainCategory} - {currentTopic}</span>
+                    <span style={{ fontSize: '14px', fontWeight: 'bold' }}>{category1} - سلسلة {nbSerieParam}</span>
                 </div>
                 <span style={{ fontWeight: 'bold' }}>codedelaroute.tn</span>
-                <span>سلسلة {new URLSearchParams(location.search).get('nb_serie') || '1'}</span>
             </div>
 
             {showEditModal && (
@@ -309,13 +407,14 @@ export default function Serie() {
                             <X size={28} />
                         </button>
                         <h2 style={{ fontSize: '22px', marginBottom: '25px', color: '#3b5998', textAlign: 'center' }}>🛠️ تعديل محتوى السؤال</h2>
-                        
+
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                            {/* Same Edit Modal logic as full_exam */}
                             <div className="classic-edit-row">
                                 <div style={{ flex: 1 }}>
                                     <label style={{ display: 'block', marginBottom: '8px', fontWeight: 700, color: '#3b5998' }}>السؤال</label>
-                                    <textarea 
-                                        value={editQuestion} 
+                                    <textarea
+                                        value={editQuestion}
                                         onChange={(e) => setEditQuestion(e.target.value)}
                                         rows="3"
                                         style={{ width: '100%', border: '1px solid #ccc', borderRadius: '8px', padding: '12px', fontSize: '16px' }}
@@ -342,8 +441,8 @@ export default function Serie() {
                             <div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                                     <label style={{ margin: 0, fontWeight: 700, color: '#3b5998' }}>خيارات الإجابة (حدد الإجابة الصحيحة)</label>
-                                    <button 
-                                        type="button" 
+                                    <button
+                                        type="button"
                                         onClick={handleAddOption}
                                         style={{ background: '#10b981', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 12px', fontSize: '14px', cursor: 'pointer' }}
                                     >
@@ -353,17 +452,14 @@ export default function Serie() {
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                     {editOptions.map((opt, i) => (
                                         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                            <input 
-                                                type="radio" 
-                                                name="correctIndex" 
-                                                checked={opt.isCorrect} 
-                                                onChange={() => setEditOptions(editOptions.map((o, idx) => ({ ...o, isCorrect: idx === i })))} 
-                                                title="اجعل هذا الخيار هو الإجابة الصحيحة"
+                                            <input
+                                                type="radio"
+                                                name="correctIndexSerie"
+                                                checked={opt.isCorrect}
+                                                onChange={() => setEditOptions(editOptions.map((o, idx) => ({ ...o, isCorrect: idx === i })))}
                                             />
-                                            <span style={{ minWidth: '30px', fontWeight: 'bold', color: opt.isCorrect ? '#10b981' : '#f43f5e' }}>
-                                                {['أ', 'ب', 'ج', 'د', 'هـ', 'و'][i] || i + 1}
-                                            </span>
-                                            <input 
+                                            <span style={{ minWidth: '30px', fontWeight: 'bold' }}>{['أ', 'ب', 'ج'][i] || i + 1}</span>
+                                            <input
                                                 type="text"
                                                 value={opt.text}
                                                 onChange={(e) => {
@@ -371,24 +467,13 @@ export default function Serie() {
                                                     newOpts[i].text = e.target.value;
                                                     setEditOptions(newOpts);
                                                 }}
-                                                style={{ flex: 1, padding: '10px', border: '1px solid #ccc', borderRadius: '8px', borderRight: opt.isCorrect ? '4px solid #10b981' : '4px solid #f43f5e' }}
-                                                placeholder={opt.isCorrect ? 'الإجابة الصحيحة...' : 'إجابة خاطئة...'}
+                                                style={{ flex: 1, padding: '10px', border: '1px solid #ccc', borderRadius: '8px' }}
                                             />
-                                            {editOptions.length > 1 && (
-                                                <button 
-                                                    type="button" 
-                                                    onClick={() => handleRemoveOption(i)}
-                                                    style={{ background: '#f43f5e', color: 'white', border: 'none', borderRadius: '4px', padding: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            )}
                                         </div>
                                     ))}
                                 </div>
                             </div>
-
-                            <button className="btn-classic" onClick={handleSaveEdit} disabled={isSaving} style={{ background: '#3b5998', color: 'white', padding: '15px', marginTop: '10px', fontSize: '18px' }}>
+                            <button className="btn-classic" onClick={handleSaveEdit} disabled={isSaving}>
                                 {isSaving ? 'جاري الحفظ...' : 'حفظ التغييرات ✅'}
                             </button>
                         </div>
@@ -398,103 +483,125 @@ export default function Serie() {
 
             <div className="classic-main-container">
                 <div className="classic-blue-section">
-                    {/* Right side (Numbers) - Moved from Right to Left visually by being last in RTL code */}
-                    <div className="classic-numbers-sidebar">
-                        <div className="classic-numbers-header">الاجابات الخاطئة</div>
-                        <div className="classic-numbers-grid" ref={scrollRef}>
-                            {quizData.map((_, i) => (
-                                <div
-                                    key={i}
-                                    className={`classic-number-row ${i === currentQuestionIndex ? 'active' : ''}`}
-                                    onClick={() => handleJumpToQuestion(i)}
-                                >
-                                    <span>{i + 1}</span>
+                    <div className="classic-right-meta-sidebar">
+                        <div className="classic-qnum-sidebar">
+                            <div className="classic-question-number-display">
+                                {/* Flag added here inside the display container */}
+                                <img 
+                                    src="https://www.atlas-monde.net/wp-content/uploads/2017/03/drapeau-tunisie.png" 
+                                    alt="Tunisia Flag" 
+                                    style={{ width: '35px', marginBottom: '8px', borderRadius: '2px' }}
+                                />
+                                <div className="q-label-ar">السؤال عدد</div>
+                                <div className="q-number-box">{currentQuestionIndex + 1}</div>
+                            </div>
+                        </div>
+                        <div className="classic-timer-sidebar">
+                            <div className="classic-timer-wrapper">
+                                <div className="classic-timer-bar-container">
+                                    {[...Array(50)].map((_, i) => (
+                                        <div key={i} className={`classic-timer-segment ${i < timeLeft ? 'active' : ''}`} />
+                                    ))}
                                 </div>
-                            ))}
+                                <div className="classic-timer-number">{timeLeft}</div>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Middle (Image) */}
                     <div className="classic-image-container">
-                        {isCurrentLessonLocked ? (
+                        {isLocked ? (
                             <div style={{ textAlign: 'center', color: '#3b5998' }}>
                                 <Lock size={80} />
-                                <h3 style={{ marginTop: '20px' }}>محتوى مقفل</h3>
-                                <button className="btn-classic" onClick={() => navigate('/subscriptions')} style={{ marginTop: '20px' }}>إشترك لفتح الدرس</button>
+                                <h3>العرض المحدود</h3>
+                                <button className="btn-classic" onClick={() => navigate('/subscriptions')} style={{ marginTop: '20px' }}>اشترك الآن لفتح السلسلة</button>
                             </div>
                         ) : (
                             <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', justifyContent: 'center' }}>
-                                {imageLoading && (
-                                    <div style={{ 
-                                        position: 'absolute', 
-                                        top: 0, left: 0, right: 0, bottom: 0, 
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center', 
-                                        background: '#f9f9f9', zIndex: 10, fontSize: '18px', color: '#3b5998' 
-                                    }}>
-                                        جاري تحميل الصورة...
-                                    </div>
-                                )}
-                                <img 
+                                {imageLoading && <div className="image-loader">جاري تحميل الصورة...</div>}
+                                <img
                                     key={currentQuestion.image}
-                                    src={currentQuestion.image} 
-                                    onLoad={() => setImageLoading(false)} 
-                                    alt="Lesson" 
+                                    src={currentQuestion.image}
+                                    onLoad={() => setImageLoading(false)}
+                                    alt="Serie"
                                 />
                             </div>
                         )}
                     </div>
 
-                    {/* Left side (Answer box) - Moved from Left to Right visually by being first in RTL code */}
                     <div className="classic-answer-sidebar">
                         <h4>اجابتك هي</h4>
-                        <p style={{ margin: '0 0 10px' }}>Votre réponse</p>
-                        <div className="classic-answer-box">
+                        <div className="classic-answer-box" style={{
+                            backgroundColor: selectedAnswer === 0 ? '#ff5252' :
+                                            selectedAnswer === 1 ? '#ffd740' :
+                                            selectedAnswer === 2 ? '#69f0ae' : '#fff',
+                            color: (selectedAnswer === 1) ? '#000' : (selectedAnswer !== null) ? '#fff' : '#3b5998',
+                        }}>
                             {selectedLetter}
-                        </div>
-                        <div className="classic-metadata">
-                            <p className="category-label">{currentTopic}</p>
-                            <p>Serie {new URLSearchParams(location.search).get('nb_serie') || '1'}</p>
-                            <button 
-                                onClick={openEditModal} 
-                                className="btn-edit-classic"
-                            >
-                                تعديل السؤال
-                            </button>
-                            <button 
-                                onClick={() => navigate(`/formation?category=${encodeURIComponent(mainCategory)}`)} 
-                                className="btn-edit-classic"
-                                style={{ marginTop: '10px', background: '#10b981' }}
-                            >
-                                تكوين
-                            </button>
                         </div>
                     </div>
                 </div>
 
                 <div className="classic-bottom-section">
-                    {!isCurrentLessonLocked && (
+                    {!isLocked && (
                         <div className="classic-question-area">
+                            <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', marginBottom: '15px' }}>
+                                <div className="category-tag">{category1} {category2 ? `(${category2})` : ''}</div>
+                                <button onClick={openEditModal} className="btn-edit-classic">تعديل السؤال</button>
+                                <button onClick={() => navigate(`/formation?category=${encodeURIComponent(category1)}`)} className="btn-edit-classic" style={{ background: '#10b981', color: 'white' }}>تكوين</button>
+                            </div>
                             <h1 className="classic-question-text">{currentQuestion.question}</h1>
-
                             <div className="classic-options-container">
-                                {currentQuestion.options.slice(0, 3).map((opt, i) => (
-                                    <div key={i} className="classic-option-item" onClick={() => setSelectedLetter(['أ', 'ب', 'ج'][i])}>
-                                        <div className={`classic-option-box ${['option-a', 'option-b', 'option-c'][i]}`}>
-                                            {['أ', 'ب', 'ج'][i]}
+                                {currentQuestion.options.map((opt, i) => {
+                                    const isCorrect = opt.isCorrect;
+                                    const isUserChoice = userChoices[currentQuestionIndex] === i;
+                                    let optionBoxClass = "";
+                                    if (isReviewMode) {
+                                        if (isCorrect) optionBoxClass = "review-correct-box";
+                                        else if (isUserChoice && !isCorrect) optionBoxClass = "review-incorrect-box";
+                                    } else if (selectedAnswer === i) {
+                                        optionBoxClass = "option-selected-box";
+                                    }
+
+                                    return (
+                                        <div key={i} className="classic-option-item" onClick={() => !isReviewMode && handleAnswerClick(i)}>
+                                            <div className={`classic-option-box ${['option-a', 'option-b', 'option-c'][i]} ${optionBoxClass}`}>
+                                                {['أ', 'ب', 'ج'][i]}
+                                            </div>
+                                            <div className="classic-option-text" style={
+                                                isReviewMode 
+                                                    ? (isCorrect ? { color: '#10b981' } : (isUserChoice ? { color: '#f43f5e' } : {}))
+                                                    : (selectedAnswer === i ? { color: '#3b5998', textDecoration: 'underline' } : {})
+                                            }>
+                                                {opt.text}
+                                            </div>
                                         </div>
-                                        <div className="classic-option-text">{opt.text}</div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </div>
                     )}
 
                     <div className="classic-controls-wrapper">
                         <div className="classic-controls">
-                            <button className="btn-classic" onClick={handlePrev} disabled={currentQuestionIndex === 0}>
-                                السابق
+                            <button 
+                                className="btn-classic" 
+                                onClick={() => navigateTo(currentQuestionIndex - 1)} 
+                                disabled={isReviewMode ? reviewIndices.indexOf(currentQuestionIndex) === 0 : currentQuestionIndex === 0}
+                            >
+                                <ChevronRight size={24} />
                             </button>
-                            <button className="btn-classic" onClick={handleNext} disabled={currentQuestionIndex >= visibleLessonCount - 1}>
+
+                            {!showAnswer && !isLocked && (
+                                <button className="btn-classic" onClick={handleReveal} disabled={selectedAnswer === null} style={{ background: '#3b5998', color: 'white', borderColor: '#3b5998' }}>
+                                    تأكيد الإجابة
+                                </button>
+                            )}
+
+                            <button 
+                                className="btn-classic" 
+                                onClick={() => navigateTo(currentQuestionIndex + 1)} 
+                                disabled={isReviewMode ? reviewIndices.indexOf(currentQuestionIndex) >= reviewIndices.length - 1 : currentQuestionIndex >= visibleCount - 1}
+                            >
                                 التالي
                             </button>
                         </div>

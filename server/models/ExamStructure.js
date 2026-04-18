@@ -2,7 +2,9 @@ const mongoose = require('mongoose');
 
 const ruleSchema = new mongoose.Schema({
     categorySource: { type: String, required: true },
-    count: { type: Number, required: true, min: 1 }
+    count: { type: Number, required: true, min: 1 },
+    series: [Number], // Optional: only pick from these series
+    selectionMode: { type: String, enum: ['all', 'specific'], default: 'all' }
 });
 
 const examStructureSchema = new mongoose.Schema({

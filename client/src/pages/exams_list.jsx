@@ -55,6 +55,8 @@ export default function ExamsList() {
         localStorage.setItem(`selected_exams_${category1}`, JSON.stringify(nextState));
     };
 
+    const [availableSeriesByRule, setAvailableSeriesByRule] = useState({});
+
     useEffect(() => {
         if (showConfigModal) {
             fetchCategories();
@@ -71,13 +73,33 @@ export default function ExamsList() {
         }
     };
 
+    const fetchSeriesForCategory = async (category, ruleIdx) => {
+        try {
+            const res = await axios.get(`${API_BASE_URL}/quiz/series?category1=${encodeURIComponent(category)}`);
+            setAvailableSeriesByRule(prev => ({ ...prev, [ruleIdx]: res.data }));
+        } catch (err) {
+            console.error("Error fetching series", err);
+        }
+    };
+
     const fetchCurrentStructure = async () => {
         try {
             const res = await axios.get(`${API_BASE_URL}/exam-structure/${category1}`);
             if (res.data && res.data.rules) {
-                setRules(res.data.rules);
+                const fetchedRules = res.data.rules.map(r => ({
+                    categorySource: r.categorySource,
+                    count: r.count,
+                    selectionMode: r.selectionMode || 'all',
+                    series: r.series || []
+                }));
+                setRules(fetchedRules);
+                // Fetch series for each rule
+                fetchedRules.forEach((rule, idx) => {
+                    fetchSeriesForCategory(rule.categorySource, idx);
+                });
             } else {
-                setRules([{ categorySource: category1, count: 30 }]);
+                setRules([{ categorySource: category1, count: 30, selectionMode: 'all', series: [] }]);
+                fetchSeriesForCategory(category1, 0);
             }
         } catch (err) {
             console.error("Error fetching structure", err);
@@ -85,16 +107,40 @@ export default function ExamsList() {
     };
 
     const addRule = () => {
-        setRules([...rules, { categorySource: allCategories[0]?.category || '', count: 5 }]);
+        const newIdx = rules.length;
+        const newCat = allCategories[0]?.category || '';
+        setRules([...rules, { categorySource: newCat, count: 5, selectionMode: 'all', series: [] }]);
+        if (newCat) fetchSeriesForCategory(newCat, newIdx);
     };
 
     const removeRule = (index) => {
         setRules(rules.filter((_, i) => i !== index));
+        // Also cleanup available series state
+        const nextAvailable = { ...availableSeriesByRule };
+        delete nextAvailable[index];
+        setAvailableSeriesByRule(nextAvailable);
     };
 
     const updateRule = (index, field, value) => {
         const newRules = [...rules];
-        newRules[index][field] = field === 'count' ? parseInt(value) : value;
+        if (field === 'categorySource') {
+            newRules[index][field] = value;
+            fetchSeriesForCategory(value, index);
+        } else if (field === 'count') {
+            newRules[index][field] = parseInt(value) || 0;
+        } else if (field === 'selectionMode') {
+            newRules[index][field] = value;
+            if (value === 'all') newRules[index].series = [];
+        } else if (field === 'series') {
+            // value is the series number to toggle
+            const currentSeries = [...newRules[index].series];
+            const serieNum = parseInt(value);
+            if (currentSeries.includes(serieNum)) {
+                newRules[index].series = currentSeries.filter(s => s !== serieNum);
+            } else {
+                newRules[index].series = [...currentSeries, serieNum];
+            }
+        }
         setRules(newRules);
     };
 
@@ -193,36 +239,94 @@ export default function ExamsList() {
                                 <p style={{ color: '#718096', fontSize: '14px' }}>حدد عدد الأسئلة من كل فئة لتكوين الامتحان الشامل</p>
                             </div>
 
-                            <div style={{ maxHeight: '400px', overflowY: 'auto', padding: '5px' }}>
+                            <div style={{ maxHeight: '420px', overflowY: 'auto', padding: '5px' }}>
                                 {rules.map((rule, idx) => (
-                                    <div key={idx} style={{ display: 'flex', gap: '10px', marginBottom: '15px', alignItems: 'center', background: '#f7fafc', padding: '15px', borderRadius: '12px', border: '1px solid #edf2f7' }}>
-                                        <div style={{ flex: 2 }}>
-                                            <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#4a5568', marginBottom: '5px' }}>الفئة</label>
-                                            <select 
-                                                value={rule.categorySource} 
-                                                onChange={(e) => updateRule(idx, 'categorySource', e.target.value)}
-                                                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e0', fontSize: '14px' }}
+                                    <div key={idx} style={{ background: '#f7fafc', padding: '20px', borderRadius: '15px', border: '1px solid #edf2f7', marginBottom: '20px' }}>
+                                        <div style={{ display: 'flex', gap: '15px', alignItems: 'flex-end', marginBottom: '15px' }}>
+                                            <div style={{ flex: 2 }}>
+                                                <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: '#a0aec0', marginBottom: '8px', textTransform: 'uppercase' }}>الفئة المصدر</label>
+                                                <select 
+                                                    value={rule.categorySource} 
+                                                    onChange={(e) => updateRule(idx, 'categorySource', e.target.value)}
+                                                    style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '14px', fontWeight: 600, background: 'white' }}
+                                                >
+                                                    {allCategories.map(cat => (
+                                                        <option key={cat._id} value={cat.category}>{cat.category}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div style={{ flex: 1 }}>
+                                                <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: '#a0aec0', marginBottom: '8px', textTransform: 'uppercase' }}>العدد</label>
+                                                <input 
+                                                    type="number" 
+                                                    value={rule.count} 
+                                                    onChange={(e) => updateRule(idx, 'count', e.target.value)}
+                                                    style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '14px', fontWeight: 700, textAlign: 'center' }}
+                                                />
+                                            </div>
+                                            <button 
+                                                onClick={() => removeRule(idx)}
+                                                style={{ background: '#fff1f2', color: '#f43f5e', border: 'none', borderRadius: '10px', width: '45px', height: '45px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                                             >
-                                                {allCategories.map(cat => (
-                                                    <option key={cat._id} value={cat.category}>{cat.category}</option>
-                                                ))}
-                                            </select>
+                                                <Trash2 size={20} />
+                                            </button>
                                         </div>
-                                        <div style={{ flex: 1 }}>
-                                            <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#4a5568', marginBottom: '5px' }}>العدد</label>
-                                            <input 
-                                                type="number" 
-                                                value={rule.count} 
-                                                onChange={(e) => updateRule(idx, 'count', e.target.value)}
-                                                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e0', fontSize: '14px' }}
-                                            />
+
+                                        <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
+                                            <button 
+                                                onClick={() => updateRule(idx, 'selectionMode', 'all')}
+                                                style={{ 
+                                                    flex: 1, padding: '10px', borderRadius: '8px', fontSize: '13px', fontWeight: 700, cursor: 'pointer',
+                                                    background: rule.selectionMode === 'all' ? 'var(--primary)' : 'white',
+                                                    color: rule.selectionMode === 'all' ? 'white' : '#718096',
+                                                    border: rule.selectionMode === 'all' ? 'none' : '1px solid #e2e8f0'
+                                                }}
+                                            >
+                                                جميع السلاسل
+                                            </button>
+                                            <button 
+                                                onClick={() => updateRule(idx, 'selectionMode', 'specific')}
+                                                style={{ 
+                                                    flex: 1, padding: '10px', borderRadius: '8px', fontSize: '13px', fontWeight: 700, cursor: 'pointer',
+                                                    background: rule.selectionMode === 'specific' ? 'var(--primary)' : 'white',
+                                                    color: rule.selectionMode === 'specific' ? 'white' : '#718096',
+                                                    border: rule.selectionMode === 'specific' ? 'none' : '1px solid #e2e8f0'
+                                                }}
+                                            >
+                                                تحديد سلاسل معينة
+                                            </button>
                                         </div>
-                                        <button 
-                                            onClick={() => removeRule(idx)}
-                                            style={{ marginTop: '20px', background: '#ffebeb', color: '#f56565', border: 'none', borderRadius: '8px', padding: '10px', cursor: 'pointer' }}
-                                        >
-                                            <Trash2 size={18} />
-                                        </button>
+
+                                        {rule.selectionMode === 'specific' && (
+                                            <div style={{ background: 'white', padding: '15px', borderRadius: '10px', border: '1px solid #e2e8f0', marginTop: '10px' }}>
+                                                <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: '#a0aec0', marginBottom: '10px' }}>اختر السلاسل:</label>
+                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(45px, 1fr))', gap: '8px' }}>
+                                                    {availableSeriesByRule[idx] ? (
+                                                        availableSeriesByRule[idx].map(s => (
+                                                            <div 
+                                                                key={s} 
+                                                                onClick={() => updateRule(idx, 'series', s)}
+                                                                style={{
+                                                                    padding: '8px 4px', borderRadius: '6px', textAlign: 'center', fontSize: '12px', fontWeight: 800, cursor: 'pointer',
+                                                                    background: rule.series.includes(s) ? 'var(--primary)' : '#f8fafc',
+                                                                    color: rule.series.includes(s) ? 'white' : '#64748b',
+                                                                    border: '1px solid',
+                                                                    borderColor: rule.series.includes(s) ? 'transparent' : '#e2e8f0',
+                                                                    transition: 'all 0.2s'
+                                                                }}
+                                                            >
+                                                                {s}
+                                                            </div>
+                                                        ))
+                                                    ) : (
+                                                        <div style={{ fontSize: '11px', color: '#cbd5e0', gridColumn: '1/-1' }}>جاري تحميل السلاسل...</div>
+                                                    )}
+                                                </div>
+                                                {rule.series.length === 0 && (
+                                                    <p style={{ color: '#f56565', fontSize: '11px', marginTop: '10px', fontWeight: 600 }}>⚠️ يرجى اختيار سلسلة واحدة على الأقل</p>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
                             </div>

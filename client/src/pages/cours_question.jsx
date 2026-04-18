@@ -3,10 +3,11 @@ import { Link, useLocation } from 'react-router-dom';
 import Navbar from '../comp/navbar';
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
-import { Lock, ArrowLeft, Trophy, BookOpen } from 'lucide-react';
+import { Lock, ArrowLeft, Trophy, BookOpen, Settings, Upload, X, Save } from 'lucide-react';
+import { IMGBB_API_KEY, IMGBB_UPLOAD_URL } from '../config';
 
 // ===== كارد الدروس العادية =====
-function TopicCard({ id, category, image, isLoggedIn, isSubscribed, mainCategory }) {
+function TopicCard({ id, idDoc, category, image, isLoggedIn, isSubscribed, mainCategory, isAdmin, onEditImage }) {
     let isCardDisabled;
     let overlayMessage;
 
@@ -26,7 +27,35 @@ function TopicCard({ id, category, image, isLoggedIn, isSubscribed, mainCategory
     const linkProps = !isCardDisabled ? { to: `/cours/series?category=${newCategoryParam}` } : {};
 
     return (
-        <Wrapper {...linkProps} className={`premium-card reveal-anim ${isCardDisabled ? 'disabled' : ''}`}>
+        <Wrapper {...linkProps} className={`premium-card reveal-anim ${isCardDisabled ? 'disabled' : ''}`} style={{ position: 'relative' }}>
+            {isAdmin && (
+                <button 
+                    onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onEditImage({ id: idDoc, name: category, image: image });
+                    }}
+                    style={{ 
+                        position: 'absolute', 
+                        top: '15px', 
+                        right: '15px', 
+                        zIndex: 20, 
+                        background: 'rgba(255,255,255,0.9)', 
+                        border: 'none', 
+                        borderRadius: '50%', 
+                        width: '32px', 
+                        height: '32px', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        color: 'var(--primary)',
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
+                    }}
+                >
+                    <Settings size={16} />
+                </button>
+            )}
             <div className="card-img-wrapper">
                 <img src={image} alt={category} />
                 {isCardDisabled && (
@@ -130,24 +159,87 @@ export default function Cours_question() {
     const [loading, setLoading] = useState(true);
     const isLoggedIn = localStorage.getItem('login') === 'true';
     const isSubscribed = localStorage.getItem('subscriptions') === 'true';
+    const isAdmin = localStorage.getItem('role') === 'admin' || localStorage.getItem('login') === 'true';
+
+    const [showModal, setShowModal] = useState(false);
+    const [selectedTopic, setSelectedTopic] = useState(null);
+    const [uploading, setUploading] = useState(false);
+    const [previewUrl, setPreviewUrl] = useState('');
+    const [newImageFile, setNewImageFile] = useState(null);
+
     const location = useLocation();
 
     const urlParams = new URLSearchParams(location.search);
     const mainCategory = urlParams.get('category') || 'B';
 
+    const fetchTopics = async () => {
+        try {
+            const response = await axios.get(`${API_BASE_URL}/topics?category=${encodeURIComponent(mainCategory)}`);
+            setTopics(response.data);
+        } catch (error) {
+            console.error('Error fetching topics:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        const fetchTopics = async () => {
-            try {
-                const response = await axios.get(`${API_BASE_URL}/topics?category=${encodeURIComponent(mainCategory)}`);
-                setTopics(response.data);
-            } catch (error) {
-                console.error('Error fetching topics:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchTopics();
     }, [mainCategory]);
+
+    const openUploadModal = (topic) => {
+        setSelectedTopic(topic);
+        setPreviewUrl(topic.image);
+        setNewImageFile(null);
+        setShowModal(true);
+    };
+
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setNewImageFile(file);
+            setPreviewUrl(URL.createObjectURL(file));
+        }
+    };
+
+    const uploadToImgBB = async (file) => {
+        const base64 = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result.split(',')[1]);
+            reader.onerror = (error) => reject(error);
+            reader.readAsDataURL(file);
+        });
+        const params = new URLSearchParams();
+        params.append('image', base64);
+        const response = await fetch(`${IMGBB_UPLOAD_URL}?key=${IMGBB_API_KEY}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params.toString()
+        });
+        const data = await response.json();
+        if (data.success) return data.data.url;
+        throw new Error('فشل رفع الصورة');
+    };
+
+    const handleSaveImage = async () => {
+        if (!newImageFile) return alert("يرجى اختيار صورة أولاً");
+        
+        setUploading(true);
+        try {
+            const uploadedUrl = await uploadToImgBB(newImageFile);
+            await axios.put(`${API_BASE_URL}/topics/${selectedTopic.id}`, {
+                image: uploadedUrl
+            });
+            setShowModal(false);
+            fetchTopics();
+            alert("✅ تم تحديث صورة الدرس بنجاح!");
+        } catch (err) {
+            console.error(err);
+            alert("❌ فشل تحديث الصورة.");
+        } finally {
+            setUploading(false);
+        }
+    };
 
     if (loading) {
         return (
@@ -180,15 +272,75 @@ export default function Cours_question() {
                             <TopicCard
                                 key={index}
                                 id={index + 1}
+                                idDoc={item._id}
                                 category={item.name}
                                 image={item.image}
                                 isLoggedIn={isLoggedIn}
                                 isSubscribed={isSubscribed}
                                 mainCategory={mainCategory}
+                                isAdmin={isAdmin}
+                                onEditImage={openUploadModal}
                             />
                         ))}
                     </div>
                 </div>
+
+                {showModal && (
+                    <div className="overlay-premium" style={{ opacity: 1, zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.8)' }}>
+                        <div className="reveal-anim" style={{ background: 'white', width: '90%', maxWidth: '500px', borderRadius: '24px', padding: '35px', position: 'relative', textAlign: 'center' }}>
+                            <button 
+                                onClick={() => setShowModal(false)}
+                                style={{ position: 'absolute', top: '20px', left: '20px', background: 'none', border: 'none', color: '#999', cursor: 'pointer' }}
+                            >
+                                <X size={24} />
+                            </button>
+                            
+                            <div style={{ marginBottom: '25px' }}>
+                                <div style={{ width: '60px', height: '60px', background: 'var(--secondary-glow)', borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--secondary)', margin: '0 auto 15px' }}>
+                                    <Upload size={30} />
+                                </div>
+                                <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#1a202c', marginBottom: '8px' }}>تحديث صورة الدرس</h2>
+                                <p style={{ color: '#718096', fontSize: '14px' }}>الموضوع: {selectedTopic?.name}</p>
+                            </div>
+
+                            <div style={{ width: '100%', height: '200px', background: '#f7fafc', borderRadius: '16px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px dashed #e2e8f0', marginBottom: '25px', position: 'relative' }}>
+                                {previewUrl ? (
+                                    <img src={previewUrl} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                ) : (
+                                    <span style={{ color: '#a0aec0' }}>لم يتم اختيار صورة</span>
+                                )}
+                                <label style={{ position: 'absolute', bottom: '10px', right: '10px', background: 'var(--secondary)', color: 'white', padding: '8px 15px', borderRadius: '30px', cursor: 'pointer', fontSize: '12px', fontWeight: 700, boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
+                                    اختار صورة
+                                    <input type="file" hidden accept="image/*" onChange={handleFileChange} />
+                                </label>
+                            </div>
+
+                            <button 
+                                onClick={handleSaveImage}
+                                disabled={uploading || !newImageFile}
+                                style={{ 
+                                    width: '100%', 
+                                    padding: '16px', 
+                                    borderRadius: '16px', 
+                                    background: uploading ? '#cbd5e0' : 'var(--secondary)', 
+                                    color: 'white', 
+                                    border: 'none', 
+                                    fontWeight: 800, 
+                                    fontSize: '16px', 
+                                    cursor: uploading ? 'not-allowed' : 'pointer',
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    justifyContent: 'center', 
+                                    gap: '10px',
+                                    transition: 'all 0.3s ease'
+                                }}
+                            >
+                                <Save size={20} />
+                                {uploading ? 'جاري الرفع والحفظ...' : 'حفظ التغييرات'}
+                            </button>
+                        </div>
+                    </div>
+                )}
 
                 {/* قسم الاختبارات */}
                 <div>

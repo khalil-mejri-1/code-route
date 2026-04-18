@@ -12,17 +12,13 @@ const WelcomeModal = ({ onClose }) => {
     <div className="modal-backdrop">
       {/* Modal content container */}
       <div className="modal-content">
-        <h2 className="modal-title"></h2>
+        <h2 className="modal-title">مرحباً بكم في منصتنا</h2>
 
         {/* The required Arabic message */}
         <p className="modal-message">
-
-
           جميع المعلومات والدروس المنشورة هنا تهدف إلى المساعدة على الفهم والدعم الذاتي للتعلّم،
           الهدف من الدروس هو التثقيف والمساعدة على الفهم فقط و
-           إتقان قانون الطرقات وإشارات المرور بطريقة تفاعلية وممتعة. استعد لاختبار رخصة القيادة بثقة كاملة.
-
-
+          إتقان قانون الطرقات وإشارات المرور بطريقة تفاعلية وممتعة. استعد لاختبار رخصة القيادة بثقة كاملة.
         </p>
 
         {/* Close button */}

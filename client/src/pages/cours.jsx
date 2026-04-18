@@ -3,9 +3,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../comp/navbar';
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
-import { ChevronLeft, Lock } from 'lucide-react';
+import { ChevronLeft, Lock, Settings, Upload, X, Save } from 'lucide-react';
+import { IMGBB_API_KEY, IMGBB_UPLOAD_URL } from '../config';
 
-function CardComponent({ category, description, image, isLoggedIn, isSubscribed }) {
+function CardComponent({ id, category, description, image, isLoggedIn, isSubscribed, isAdmin, onEditImage }) {
     const navigate = useNavigate();
     let isCardDisabled;
     let overlayMessage;
@@ -41,10 +42,37 @@ function CardComponent({ category, description, image, isLoggedIn, isSubscribed 
 
     return (
         <div 
-            onClick={handleCardClick} 
             className={`premium-card reveal-anim ${isCardDisabled ? 'disabled' : ''}`}
+            style={{ position: 'relative' }}
         >
-            <div className="card-img-wrapper">
+            {isAdmin && (
+                <button 
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onEditImage({ id, category, image });
+                    }}
+                    style={{ 
+                        position: 'absolute', 
+                        top: '15px', 
+                        right: '15px', 
+                        zIndex: 20, 
+                        background: 'rgba(255,255,255,0.9)', 
+                        border: 'none', 
+                        borderRadius: '50%', 
+                        width: '35px', 
+                        height: '35px', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        color: 'var(--primary)',
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
+                    }}
+                >
+                    <Settings size={18} />
+                </button>
+            )}
+            <div className="card-img-wrapper" onClick={handleCardClick}>
                 <img src={image} alt={category} />
                 {isCardDisabled && (
                     <div className="overlay-premium">
@@ -83,20 +111,82 @@ export default function Cours() {
 
     const isLoggedIn = localStorage.getItem('login') === 'true';
     const isSubscribed = localStorage.getItem('subscriptions') === 'true';
+    const isAdmin = localStorage.getItem('role') === 'admin' || localStorage.getItem('login') === 'true';
+
+    const [showModal, setShowModal] = useState(false);
+    const [selectedCategory, setSelectedCategory] = useState(null);
+    const [uploading, setUploading] = useState(false);
+    const [previewUrl, setPreviewUrl] = useState('');
+    const [newImageFile, setNewImageFile] = useState(null);
+
+    const fetchCategories = async () => {
+        try {
+            const response = await axios.get(`${API_BASE_URL}/categories`);
+            setLicenseCategories(response.data);
+        } catch (error) {
+            console.error('Error fetching categories:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchCategories = async () => {
-            try {
-                const response = await axios.get(`${API_BASE_URL}/categories`);
-                setLicenseCategories(response.data);
-            } catch (error) {
-                console.error('Error fetching categories:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchCategories();
     }, []);
+
+    const openUploadModal = (cat) => {
+        setSelectedCategory(cat);
+        setPreviewUrl(cat.image);
+        setNewImageFile(null);
+        setShowModal(true);
+    };
+
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setNewImageFile(file);
+            setPreviewUrl(URL.createObjectURL(file));
+        }
+    };
+
+    const uploadToImgBB = async (file) => {
+        const base64 = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result.split(',')[1]);
+            reader.onerror = (error) => reject(error);
+            reader.readAsDataURL(file);
+        });
+        const params = new URLSearchParams();
+        params.append('image', base64);
+        const response = await fetch(`${IMGBB_UPLOAD_URL}?key=${IMGBB_API_KEY}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params.toString()
+        });
+        const data = await response.json();
+        if (data.success) return data.data.url;
+        throw new Error('فشل رفع الصورة');
+    };
+
+    const handleSaveImage = async () => {
+        if (!newImageFile) return alert("يرجى اختيار صورة أولاً");
+        
+        setUploading(true);
+        try {
+            const uploadedUrl = await uploadToImgBB(newImageFile);
+            await axios.put(`${API_BASE_URL}/categories/${selectedCategory.id}`, {
+                image: uploadedUrl
+            });
+            setShowModal(false);
+            fetchCategories();
+            alert("✅ تم تحديث الصورة بنجاح!");
+        } catch (err) {
+            console.error(err);
+            alert("❌ فشل تحديث الصورة.");
+        } finally {
+            setUploading(false);
+        }
+    };
 
     if (loading) {
         return (
@@ -122,14 +212,74 @@ export default function Cours() {
                     {licenseCategories.map((item, index) => (
                         <CardComponent
                             key={index}
+                            id={item._id}
                             category={item.category}
                             description={item.description}
                             image={item.image}
                             isLoggedIn={isLoggedIn}
                             isSubscribed={isSubscribed}
+                            isAdmin={isAdmin}
+                            onEditImage={openUploadModal}
                         />
                     ))}
                 </div>
+
+                {showModal && (
+                    <div className="overlay-premium" style={{ opacity: 1, zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.8)' }}>
+                        <div className="reveal-anim" style={{ background: 'white', width: '90%', maxWidth: '500px', borderRadius: '24px', padding: '35px', position: 'relative', textAlign: 'center' }}>
+                            <button 
+                                onClick={() => setShowModal(false)}
+                                style={{ position: 'absolute', top: '20px', left: '20px', background: 'none', border: 'none', color: '#999', cursor: 'pointer' }}
+                            >
+                                <X size={24} />
+                            </button>
+                            
+                            <div style={{ marginBottom: '25px' }}>
+                                <div style={{ width: '60px', height: '60px', background: 'var(--primary-glow)', borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', margin: '0 auto 15px' }}>
+                                    <Upload size={30} />
+                                </div>
+                                <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#1a202c', marginBottom: '8px' }}>تحديث صورة الفئة</h2>
+                                <p style={{ color: '#718096', fontSize: '14px' }}>الفئة: {selectedCategory?.category}</p>
+                            </div>
+
+                            <div style={{ width: '100%', height: '200px', background: '#f7fafc', borderRadius: '16px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px dashed #e2e8f0', marginBottom: '25px', position: 'relative' }}>
+                                {previewUrl ? (
+                                    <img src={previewUrl} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                ) : (
+                                    <span style={{ color: '#a0aec0' }}>لم يتم اختيار صورة</span>
+                                )}
+                                <label style={{ position: 'absolute', bottom: '10px', right: '10px', background: 'var(--primary)', color: 'white', padding: '8px 15px', borderRadius: '30px', cursor: 'pointer', fontSize: '12px', fontWeight: 700, boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
+                                    اختار صورة
+                                    <input type="file" hidden accept="image/*" onChange={handleFileChange} />
+                                </label>
+                            </div>
+
+                            <button 
+                                onClick={handleSaveImage}
+                                disabled={uploading || !newImageFile}
+                                style={{ 
+                                    width: '100%', 
+                                    padding: '16px', 
+                                    borderRadius: '16px', 
+                                    background: uploading ? '#cbd5e0' : 'var(--primary)', 
+                                    color: 'white', 
+                                    border: 'none', 
+                                    fontWeight: 800, 
+                                    fontSize: '16px', 
+                                    cursor: uploading ? 'not-allowed' : 'pointer',
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    justifyContent: 'center', 
+                                    gap: '10px',
+                                    transition: 'all 0.3s ease'
+                                }}
+                            >
+                                <Save size={20} />
+                                {uploading ? 'جاري الرفع والحفظ...' : 'حفظ التغييرات'}
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
