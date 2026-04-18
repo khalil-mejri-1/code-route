@@ -478,7 +478,13 @@ app.get('/api/quiz/exam', async (req, res) => {
 
             // Loop through rules and fetch questions for each source category
             for (const rule of customStructure.rules) {
-                const sourceQuestions = await Question.find({ category1: rule.categorySource }).exec();
+                let query = { category1: rule.categorySource };
+                
+                if (rule.selectionMode === 'specific' && rule.series && rule.series.length > 0) {
+                    query.nb_serie = { $in: rule.series };
+                }
+
+                const sourceQuestions = await Question.find(query).exec();
                 if (sourceQuestions.length > 0) {
                     // Shuffle and pick 'count' questions
                     const picked = sourceQuestions.sort(() => Math.random() - 0.5).slice(0, rule.count);
