@@ -237,13 +237,26 @@ app.get('/api/quiz/series', async (req, res) => {
             query.$or = [{ category2: "" }, { category2: { $exists: false } }];
         }
 
-        // البحث عن أرقام السلاسل الفريدة
-        const series = await Question.distinct('nb_serie', query);
+        // البحث عن أرقام السلاسل الفريدة مع أسمائها المخصصة
+        const seriesData = await Question.aggregate([
+            { $match: query },
+            { 
+                $group: { 
+                    _id: "$nb_serie",
+                    serieName: { $first: "$serieName" },
+                    serieSubName: { $first: "$serieSubName" }
+                } 
+            },
+            { $sort: { _id: 1 } }
+        ]);
 
-        // ترتيب السلاسل تصاعدياً
-        series.sort((a, b) => a - b);
+        const formattedSeries = seriesData.map(s => ({
+            nb_serie: s._id,
+            serieName: s.serieName || `السلسلة ${s._id}`,
+            serieSubName: s.serieSubName || ''
+        }));
 
-        res.status(200).json(series);
+        res.status(200).json(formattedSeries);
 
     } catch (error) {
         console.error('Error fetching series:', error);
@@ -390,6 +403,69 @@ app.post('/api/questions/delete-option-globally', async (req, res) => {
         console.error('Error deleting global option:', error);
         res.status(500).json({
             message: '❌ فشل في حذف الخيار عالميًا.',
+            error: error.message
+        });
+    }
+});
+
+// ------------------------------------------------------------------
+// ⭐️⭐️ NEW ENDPOINT: إعادة تسمية (تغيير رقم) سلسلة معينة ⭐️⭐️
+// ------------------------------------------------------------------
+app.put('/api/quiz/series/rename', async (req, res) => {
+    try {
+        const { 
+            category1, 
+            category2, 
+            oldSerieNum, 
+            newSerieNum, 
+            serieName, 
+            serieSubName,
+            newCategory1 
+        } = req.body;
+
+        if (!category1 || oldSerieNum === undefined) {
+            return res.status(400).json({ message: 'يجب تقديم الفئة والرقم القديم.' });
+        }
+
+        // تحديث جميع الأسئلة
+        const filter = { category1: category1.trim(), nb_serie: parseInt(oldSerieNum) };
+        if (category2) {
+            filter.category2 = category2.trim();
+        } else {
+             // البحث عن الأسئلة التي ليس لها موضوع فرعي أو موضوعها فارغ
+             filter.$or = [{ category2: "" }, { category2: { $exists: false } }];
+        }
+
+        const updateFields = {};
+        if (serieName !== undefined) updateFields.serieName = serieName;
+        if (serieSubName !== undefined) updateFields.serieSubName = serieSubName;
+
+        if (newCategory1 !== undefined && newCategory1.trim() !== category1.trim()) {
+            // إذا كان هناك نقل لصنف جديد، نضعها في الأخير تلقائياً
+            const targetCat = newCategory1.trim();
+            const lastSerie = await Question.findOne({ category1: targetCat }).sort({ nb_serie: -1 });
+            const nextSerieNum = lastSerie ? lastSerie.nb_serie + 1 : 1;
+            
+            updateFields.category1 = targetCat;
+            updateFields.nb_serie = nextSerieNum;
+        } else {
+            // إذا كان في نفس الصنف، نكتفي بتحديث الرقم إذا وجد
+            if (newSerieNum !== undefined) updateFields.nb_serie = parseInt(newSerieNum);
+        }
+
+        const result = await Question.updateMany(
+            filter,
+            { $set: updateFields }
+        );
+
+        res.status(200).json({
+            message: `✅ تم تحديث بيانات السلسلة بنجاح!`,
+            modifiedCount: result.modifiedCount
+        });
+    } catch (error) {
+        console.error('Error updating series metadata:', error);
+        res.status(500).json({
+            message: '❌ فشل في تحديث بيانات السلسلة.',
             error: error.message
         });
     }

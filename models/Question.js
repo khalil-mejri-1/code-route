@@ -39,7 +39,16 @@ const QuestionSchema = new mongoose.Schema({
     nb_serie: {
         type: Number,
         required: true,
-
+    },
+    serieName: {
+        type: String,
+        default: '',
+        trim: true
+    },
+    serieSubName: {
+        type: String,
+        default: '',
+        trim: true
     },
     options: {
         type: [OptionSchema], // مصفوفة من خيارات الإجابة
