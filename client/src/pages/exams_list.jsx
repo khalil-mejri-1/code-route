@@ -170,7 +170,7 @@ export default function ExamsList() {
         }
 
         // Determine number of exams based on category
-        const numberOfExams = category1 === 'A' ? 15 : 24;
+        const numberOfExams = category1 === 'A' ? 15 : category1 === 'B' ? 28 : 24;
 
         // Generate unique random series numbers between 1 and 28
         const availableSeries = Array.from({ length: 28 }, (_, i) => i + 1);

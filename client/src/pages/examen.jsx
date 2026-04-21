@@ -3,9 +3,10 @@ import Navbar from '../comp/navbar';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
-import { Trophy, Lock, ChevronLeft } from 'lucide-react';
+import { Trophy, Lock, ChevronLeft, Settings, X, Save, Upload } from 'lucide-react';
+import { IMGBB_API_KEY, IMGBB_UPLOAD_URL } from '../config';
 
-function CardComponent({ category, description, image, isLoggedIn, isSubscribed }) {
+function CardComponent({ id, category, description, image, isLoggedIn, isSubscribed, isAdmin, onEditContent }) {
     const navigate = useNavigate();
     let isCardDisabled;
     let overlayMessage;
@@ -39,10 +40,10 @@ function CardComponent({ category, description, image, isLoggedIn, isSubscribed 
 
     return (
         <div 
-            onClick={handleCardClick} 
             className={`premium-card reveal-anim ${isCardDisabled ? 'disabled' : ''}`}
+            style={{ position: 'relative' }}
         >
-            <div className="card-img-wrapper">
+            <div className="card-img-wrapper" onClick={handleCardClick}>
                 <img src={image} alt={category} />
                 {isCardDisabled && (
                     <div className="overlay-premium">
@@ -65,7 +66,21 @@ function CardComponent({ category, description, image, isLoggedIn, isSubscribed 
                 <h3 className="card-title-premium">اختبارات صنف {category}</h3>
                 <p className="card-desc-premium">{description.replace('دروس', 'اختبارات')}</p>
                 
-                <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
+                <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    {isAdmin ? (
+                        <button 
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onEditContent({ id, category, description, image });
+                            }}
+                            className="btn-premium-sm"
+                            style={{ padding: '8px 16px', fontSize: '12px', background: 'var(--bg-accent)', color: 'var(--primary)', border: '1px solid var(--primary-glow)' }}
+                        >
+                            تعديل المحتوى
+                        </button>
+                    ) : (
+                        <div></div>
+                    )}
                     <div style={{ padding: '8px', border: '1px solid var(--glass-border)', borderRadius: '50%' }}>
                         <ChevronLeft size={20} color="var(--primary)" />
                     </div>
@@ -80,20 +95,90 @@ export default function Examen() {
     const [loading, setLoading] = useState(true);
     const isLoggedIn = localStorage.getItem('login') === 'true';
     const isSubscribed = localStorage.getItem('subscriptions') === 'true';
+    const isAdmin = localStorage.getItem('role') === 'admin' || localStorage.getItem('login') === 'true';
+
+    const [showModal, setShowModal] = useState(false);
+    const [selectedCategory, setSelectedCategory] = useState(null);
+    const [uploading, setUploading] = useState(false);
+    const [previewUrl, setPreviewUrl] = useState('');
+    const [newImageFile, setNewImageFile] = useState(null);
+    const [editCategoryName, setEditCategoryName] = useState('');
+    const [editDescription, setEditDescription] = useState('');
+
+    const fetchCategories = async () => {
+        try {
+            const response = await axios.get(`${API_BASE_URL}/categories`);
+            setCategories(response.data);
+        } catch (error) {
+            console.error('Error fetching categories:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchCategories = async () => {
-            try {
-                const response = await axios.get(`${API_BASE_URL}/categories`);
-                setCategories(response.data);
-            } catch (error) {
-                console.error('Error fetching categories:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchCategories();
     }, []);
+
+    const openEditModal = (cat) => {
+        setSelectedCategory(cat);
+        setPreviewUrl(cat.image);
+        setEditCategoryName(cat.category);
+        setEditDescription(cat.description);
+        setNewImageFile(null);
+        setShowModal(true);
+    };
+
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setNewImageFile(file);
+            setPreviewUrl(URL.createObjectURL(file));
+        }
+    };
+
+    const uploadToImgBB = async (file) => {
+        const base64 = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result.split(',')[1]);
+            reader.onerror = (error) => reject(error);
+            reader.readAsDataURL(file);
+        });
+        const params = new URLSearchParams();
+        params.append('image', base64);
+        const response = await fetch(`${IMGBB_UPLOAD_URL}?key=${IMGBB_API_KEY}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params.toString()
+        });
+        const data = await response.json();
+        if (data.success) return data.data.url;
+        throw new Error('فشل رفع الصورة');
+    };
+
+    const handleSaveCategory = async () => {
+        setUploading(true);
+        try {
+            let uploadedUrl = selectedCategory.image;
+            if (newImageFile) {
+                uploadedUrl = await uploadToImgBB(newImageFile);
+            }
+            
+            await axios.put(`${API_BASE_URL}/categories/${selectedCategory.id}`, {
+                category: editCategoryName,
+                description: editDescription,
+                image: uploadedUrl
+            });
+            setShowModal(false);
+            fetchCategories();
+            alert("✅ تم تحديث بيانات الفئة بنجاح!");
+        } catch (err) {
+            console.error(err);
+            alert("❌ فشل تحديث البيانات.");
+        } finally {
+            setUploading(false);
+        }
+    };
 
     if (loading) {
         return (
@@ -119,14 +204,94 @@ export default function Examen() {
                     {categories.map((item, index) => (
                         <CardComponent
                             key={index}
+                            id={item._id}
                             category={item.category}
                             description={item.description}
                             image={item.image}
                             isLoggedIn={isLoggedIn}
                             isSubscribed={isSubscribed}
+                            isAdmin={isAdmin}
+                            onEditContent={openEditModal}
                         />
                     ))}
                 </div>
+
+                {showModal && (
+                    <div className="overlay-premium" style={{ opacity: 1, zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.8)' }}>
+                        <div className="reveal-anim" style={{ background: 'white', width: '95%', maxWidth: '500px', borderRadius: '24px', padding: '35px', position: 'relative', textAlign: 'center', maxHeight: '90vh', overflowY: 'auto' }}>
+                            <button 
+                                onClick={() => setShowModal(false)}
+                                style={{ position: 'absolute', top: '20px', left: '20px', background: 'none', border: 'none', color: '#999', cursor: 'pointer' }}
+                            >
+                                <X size={24} color="#000" />
+                            </button>
+                            
+                            <div style={{ marginBottom: '25px' }}>
+                                <div style={{ width: '60px', height: '60px', background: 'var(--primary-glow)', borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', margin: '0 auto 15px' }}>
+                                    <Trophy size={30} />
+                                </div>
+                                <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#1a202c', marginBottom: '8px' }}>تعديل بيانات الاختبار</h2>
+                            </div>
+
+                            <div style={{ textAlign: 'right', marginBottom: '20px' }}>
+                                <label style={{ display: 'block', fontSize: '14px', fontWeight: 700, marginBottom: '8px', color: '#4a5568' }}>اسم الفئة:</label>
+                                <input 
+                                    type="text" 
+                                    value={editCategoryName}
+                                    onChange={(e) => setEditCategoryName(e.target.value)}
+                                    style={{ width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '10px', fontSize: '15px' }}
+                                />
+                            </div>
+
+                            <div style={{ textAlign: 'right', marginBottom: '20px' }}>
+                                <label style={{ display: 'block', fontSize: '14px', fontWeight: 700, marginBottom: '8px', color: '#4a5568' }}>الوصف:</label>
+                                <textarea 
+                                    value={editDescription}
+                                    onChange={(e) => setEditDescription(e.target.value)}
+                                    rows="3"
+                                    style={{ width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '10px', fontSize: '15px', fontFamily: 'inherit' }}
+                                ></textarea>
+                            </div>
+
+                            <div style={{ textAlign: 'right', marginBottom: '25px' }}>
+                                <label style={{ display: 'block', fontSize: '14px', fontWeight: 700, marginBottom: '8px', color: '#4a5568' }}>صورة الاختبار:</label>
+                                <div style={{ width: '100%', height: '150px', background: '#f7fafc', borderRadius: '16px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px dashed #e2e8f0', position: 'relative' }}>
+                                    {previewUrl ? (
+                                        <img src={previewUrl} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                    ) : (
+                                        <span style={{ color: '#a0aec0' }}>لم يتم اختيار صورة</span>
+                                    )}
+                                    <label style={{ position: 'absolute', bottom: '10px', right: '10px', background: 'var(--primary)', color: 'white', padding: '6px 12px', borderRadius: '30px', cursor: 'pointer', fontSize: '11px', fontWeight: 700, boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
+                                        تغيير الرابط
+                                        <input type="file" hidden accept="image/*" onChange={handleFileChange} />
+                                    </label>
+                                </div>
+                            </div>
+
+                            <button 
+                                onClick={handleSaveCategory}
+                                disabled={uploading}
+                                style={{ 
+                                    width: '100%', 
+                                    padding: '16px', 
+                                    borderRadius: '16px', 
+                                    background: uploading ? '#cbd5e0' : 'var(--primary)', 
+                                    color: 'white', 
+                                    border: 'none', 
+                                    fontWeight: 800, 
+                                    fontSize: '16px', 
+                                    cursor: uploading ? 'not-allowed' : 'pointer',
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    justifyContent: 'center', 
+                                    gap: '10px'
+                                }}
+                            >
+                                {uploading ? 'جاري الحفظ...' : 'حفظ التغييرات'}
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

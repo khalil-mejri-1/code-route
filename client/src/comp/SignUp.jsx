@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom'; // 1. Importer useNavigate
 import axios from 'axios'; // ⭐️ Import Axios
+import { User, Mail, Lock } from 'lucide-react';
 import { API_BASE_URL } from '../config';
 import Navbar from './navbar';
 
@@ -79,62 +80,74 @@ const SignUp = ({ onToggleMode }) => {
                     </div>
 
                     <form onSubmit={handleSubmit} className="auth-form">
-                        {error && <div className="auth-error">{error}</div>}
+                        {error && <div className="auth-message auth-error">{error}</div>}
 
                         <div className="form-group">
                             <label htmlFor="fullName" className="form-label">الاسم الكامل</label>
-                            <input
-                                id="fullName"
-                                type="text"
-                                value={fullName}
-                                onChange={(e) => setFullName(e.target.value)}
-                                className="form-input"
-                                placeholder="أدخل اسمك الكامل"
-                                disabled={loading}
-                                required
-                            />
+                            <div className="input-with-icon">
+                                <input
+                                    id="fullName"
+                                    type="text"
+                                    value={fullName}
+                                    onChange={(e) => setFullName(e.target.value)}
+                                    className="form-input"
+                                    placeholder="أدخل اسمك الكامل"
+                                    disabled={loading}
+                                    required
+                                />
+                                <User className="input-icon" size={18} />
+                            </div>
                         </div>
 
                         <div className="form-group">
                             <label htmlFor="email" className="form-label">البريد الإلكتروني</label>
-                            <input
-                                id="email"
-                                type="email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                className="form-input"
-                                placeholder="example@email.com"
-                                disabled={loading}
-                                required
-                            />
+                            <div className="input-with-icon">
+                                <input
+                                    id="email"
+                                    type="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    className="form-input"
+                                    placeholder="example@email.com"
+                                    disabled={loading}
+                                    required
+                                />
+                                <Mail className="input-icon" size={18} />
+                            </div>
                         </div>
 
                         <div className="form-group">
                             <label htmlFor="password" className="form-label">كلمة المرور</label>
-                            <input
-                                id="password"
-                                type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="form-input"
-                                placeholder="••••••••"
-                                disabled={loading}
-                                required
-                            />
+                            <div className="input-with-icon">
+                                <input
+                                    id="password"
+                                    type="password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="form-input"
+                                    placeholder="••••••••"
+                                    disabled={loading}
+                                    required
+                                />
+                                <Lock className="input-icon" size={18} />
+                            </div>
                         </div>
 
                         <div className="form-group">
                             <label htmlFor="confirmPassword" className="form-label">تأكيد كلمة المرور</label>
-                            <input
-                                id="confirmPassword"
-                                type="password"
-                                value={confirmPassword}
-                                onChange={(e) => setConfirmPassword(e.target.value)}
-                                className="form-input"
-                                placeholder="••••••••"
-                                disabled={loading}
-                                required
-                            />
+                            <div className="input-with-icon">
+                                <input
+                                    id="confirmPassword"
+                                    type="password"
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    className="form-input"
+                                    placeholder="••••••••"
+                                    disabled={loading}
+                                    required
+                                />
+                                <Lock className="input-icon" size={18} />
+                            </div>
                         </div>
 
                         <button

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { Mail, Lock } from 'lucide-react';
 import { API_BASE_URL } from '../config';
 import Navbar from '../comp/navbar';
 
@@ -75,30 +76,36 @@ const Login = ({ onToggleMode }) => {
 
                         <div className="form-group">
                             <label htmlFor="email" className="form-label">البريد الإلكتروني</label>
-                            <input
-                                id="email"
-                                type="email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                className="form-input"
-                                placeholder="example@email.com"
-                                disabled={loading}
-                                required
-                            />
+                            <div className="input-with-icon">
+                                <input
+                                    id="email"
+                                    type="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    className="form-input"
+                                    placeholder="example@email.com"
+                                    disabled={loading}
+                                    required
+                                />
+                                <Mail className="input-icon" size={18} />
+                            </div>
                         </div>
 
                         <div className="form-group">
                             <label htmlFor="password" className="form-label">كلمة المرور</label>
-                            <input
-                                id="password"
-                                type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="form-input"
-                                placeholder="••••••••"
-                                disabled={loading}
-                                required
-                            />
+                            <div className="input-with-icon">
+                                <input
+                                    id="password"
+                                    type="password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="form-input"
+                                    placeholder="••••••••"
+                                    disabled={loading}
+                                    required
+                                />
+                                <Lock className="input-icon" size={18} />
+                            </div>
                         </div>
 
                         <button

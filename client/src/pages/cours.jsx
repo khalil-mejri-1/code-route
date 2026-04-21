@@ -3,11 +3,19 @@ import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../comp/navbar';
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
-import { ChevronLeft, Lock, Settings, Upload, X, Save } from 'lucide-react';
+import { ChevronLeft, Lock, Save, Settings, X, Trash2 } from 'lucide-react';
 import { IMGBB_API_KEY, IMGBB_UPLOAD_URL } from '../config';
 
-function CardComponent({ id, category, description, image, isLoggedIn, isSubscribed, isAdmin, onEditImage }) {
+function CardComponent({ id, category, description, image, isLoggedIn, isSubscribed, isAdmin, onEditContent, onDelete }) {
     const navigate = useNavigate();
+    
+    const handleDeleteClick = (e) => {
+        e.stopPropagation();
+        if (window.confirm(`هل أنت متأكد من حذف صنف ${category}؟ سيعتبر هذا الإجراء نهائياً.`)) {
+            onDelete(id);
+        }
+    };
+
     let isCardDisabled;
     let overlayMessage;
 
@@ -45,33 +53,7 @@ function CardComponent({ id, category, description, image, isLoggedIn, isSubscri
             className={`premium-card reveal-anim ${isCardDisabled ? 'disabled' : ''}`}
             style={{ position: 'relative' }}
         >
-            {isAdmin && (
-                <button 
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        onEditImage({ id, category, image });
-                    }}
-                    style={{ 
-                        position: 'absolute', 
-                        top: '15px', 
-                        right: '15px', 
-                        zIndex: 20, 
-                        background: 'rgba(255,255,255,0.9)', 
-                        border: 'none', 
-                        borderRadius: '50%', 
-                        width: '35px', 
-                        height: '35px', 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center', 
-                        color: 'var(--primary)',
-                        cursor: 'pointer',
-                        boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
-                    }}
-                >
-                    <Settings size={18} />
-                </button>
-            )}
+            {/* Settings button removed from here, moved to card-body-premium */}
             <div className="card-img-wrapper" onClick={handleCardClick}>
                 <img src={image} alt={category} />
                 {isCardDisabled && (
@@ -95,7 +77,43 @@ function CardComponent({ id, category, description, image, isLoggedIn, isSubscri
                 <h3 className="card-title-premium">صنف {category}</h3>
                 <p className="card-desc-premium">{description}</p>
                 
-                <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
+                <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    {isAdmin ? (
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            <button 
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onEditContent({ id, category, description, image });
+                                }}
+                                className="btn-premium-sm"
+                                style={{ padding: '8px 16px', fontSize: '12px', background: 'var(--bg-accent)', color: 'var(--primary)', border: '1px solid var(--primary-glow)' }}
+                            >
+                                تعديل المحتوى
+                            </button>
+                            <button 
+                                onClick={handleDeleteClick}
+                                style={{ 
+                                    background: 'rgba(239, 68, 68, 0.1)', 
+                                    border: '1px solid rgba(239, 68, 68, 0.2)', 
+                                    color: '#ef4444', 
+                                    padding: '8px', 
+                                    borderRadius: '10px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.3s ease'
+                                }}
+                                title="حذف الفئة"
+                                onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)'; }}
+                                onMouseOut={(e) => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'; }}
+                            >
+                                <Trash2 size={16} />
+                            </button>
+                        </div>
+                    ) : (
+                        <div></div>
+                    )}
                     <div style={{ padding: '8px', border: '1px solid var(--glass-border)', borderRadius: '50%' }}>
                         <ChevronLeft size={20} color="var(--primary)" />
                     </div>
@@ -118,6 +136,8 @@ export default function Cours() {
     const [uploading, setUploading] = useState(false);
     const [previewUrl, setPreviewUrl] = useState('');
     const [newImageFile, setNewImageFile] = useState(null);
+    const [editCategoryName, setEditCategoryName] = useState('');
+    const [editDescription, setEditDescription] = useState('');
 
     const fetchCategories = async () => {
         try {
@@ -134,9 +154,11 @@ export default function Cours() {
         fetchCategories();
     }, []);
 
-    const openUploadModal = (cat) => {
+    const openEditModal = (cat) => {
         setSelectedCategory(cat);
         setPreviewUrl(cat.image);
+        setEditCategoryName(cat.category);
+        setEditDescription(cat.description);
         setNewImageFile(null);
         setShowModal(true);
     };
@@ -168,21 +190,36 @@ export default function Cours() {
         throw new Error('فشل رفع الصورة');
     };
 
-    const handleSaveImage = async () => {
-        if (!newImageFile) return alert("يرجى اختيار صورة أولاً");
-        
+    const handleDeleteCategory = async (id) => {
+        try {
+            await axios.delete(`${API_BASE_URL}/categories/${id}`);
+            fetchCategories();
+            alert("✅ تم حذف الفئة بنجاح!");
+        } catch (err) {
+            console.error(err);
+            alert("❌ فشل حذف الفئة.");
+        }
+    };
+
+    const handleSaveCategory = async () => {
         setUploading(true);
         try {
-            const uploadedUrl = await uploadToImgBB(newImageFile);
+            let uploadedUrl = selectedCategory.image;
+            if (newImageFile) {
+                uploadedUrl = await uploadToImgBB(newImageFile);
+            }
+            
             await axios.put(`${API_BASE_URL}/categories/${selectedCategory.id}`, {
+                category: editCategoryName,
+                description: editDescription,
                 image: uploadedUrl
             });
             setShowModal(false);
             fetchCategories();
-            alert("✅ تم تحديث الصورة بنجاح!");
+            alert("✅ تم تحديث بيانات الفئة بنجاح!");
         } catch (err) {
             console.error(err);
-            alert("❌ فشل تحديث الصورة.");
+            alert("❌ فشل تحديث البيانات.");
         } finally {
             setUploading(false);
         }
@@ -219,14 +256,15 @@ export default function Cours() {
                             isLoggedIn={isLoggedIn}
                             isSubscribed={isSubscribed}
                             isAdmin={isAdmin}
-                            onEditImage={openUploadModal}
+                            onEditContent={openEditModal}
+                            onDelete={handleDeleteCategory}
                         />
                     ))}
                 </div>
 
                 {showModal && (
                     <div className="overlay-premium" style={{ opacity: 1, zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.8)' }}>
-                        <div className="reveal-anim" style={{ background: 'white', width: '90%', maxWidth: '500px', borderRadius: '24px', padding: '35px', position: 'relative', textAlign: 'center' }}>
+                        <div className="reveal-anim" style={{ background: 'white', width: '95%', maxWidth: '500px', borderRadius: '24px', padding: '35px', position: 'relative', textAlign: 'center', maxHeight: '90vh', overflowY: 'auto' }}>
                             <button 
                                 onClick={() => setShowModal(false)}
                                 style={{ position: 'absolute', top: '20px', left: '20px', background: 'none', border: 'none', color: '#999', cursor: 'pointer' }}
@@ -236,27 +274,49 @@ export default function Cours() {
                             
                             <div style={{ marginBottom: '25px' }}>
                                 <div style={{ width: '60px', height: '60px', background: 'var(--primary-glow)', borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', margin: '0 auto 15px' }}>
-                                    <Upload size={30} />
+                                    <Settings size={30} />
                                 </div>
-                                <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#1a202c', marginBottom: '8px' }}>تحديث صورة الفئة</h2>
-                                <p style={{ color: '#718096', fontSize: '14px' }}>الفئة: {selectedCategory?.category}</p>
+                                <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#1a202c', marginBottom: '8px' }}>تعديل بيانات الفئة</h2>
                             </div>
 
-                            <div style={{ width: '100%', height: '200px', background: '#f7fafc', borderRadius: '16px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px dashed #e2e8f0', marginBottom: '25px', position: 'relative' }}>
-                                {previewUrl ? (
-                                    <img src={previewUrl} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                                ) : (
-                                    <span style={{ color: '#a0aec0' }}>لم يتم اختيار صورة</span>
-                                )}
-                                <label style={{ position: 'absolute', bottom: '10px', right: '10px', background: 'var(--primary)', color: 'white', padding: '8px 15px', borderRadius: '30px', cursor: 'pointer', fontSize: '12px', fontWeight: 700, boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
-                                    اختار صورة
-                                    <input type="file" hidden accept="image/*" onChange={handleFileChange} />
-                                </label>
+                            <div style={{ textAlign: 'right', marginBottom: '20px' }}>
+                                <label style={{ display: 'block', fontSize: '14px', fontWeight: 700, marginBottom: '8px', color: '#4a5568' }}>اسم الفئة:</label>
+                                <input 
+                                    type="text" 
+                                    value={editCategoryName}
+                                    onChange={(e) => setEditCategoryName(e.target.value)}
+                                    style={{ width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '10px', fontSize: '15px' }}
+                                />
+                            </div>
+
+                            <div style={{ textAlign: 'right', marginBottom: '20px' }}>
+                                <label style={{ display: 'block', fontSize: '14px', fontWeight: 700, marginBottom: '8px', color: '#4a5568' }}>الوصف:</label>
+                                <textarea 
+                                    value={editDescription}
+                                    onChange={(e) => setEditDescription(e.target.value)}
+                                    rows="3"
+                                    style={{ width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '10px', fontSize: '15px', fontFamily: 'inherit' }}
+                                ></textarea>
+                            </div>
+
+                            <div style={{ textAlign: 'right', marginBottom: '25px' }}>
+                                <label style={{ display: 'block', fontSize: '14px', fontWeight: 700, marginBottom: '8px', color: '#4a5568' }}>صورة الفئة:</label>
+                                <div style={{ width: '100%', height: '150px', background: '#f7fafc', borderRadius: '16px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px dashed #e2e8f0', position: 'relative' }}>
+                                    {previewUrl ? (
+                                        <img src={previewUrl} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                    ) : (
+                                        <span style={{ color: '#a0aec0' }}>لم يتم اختيار صورة</span>
+                                    )}
+                                    <label style={{ position: 'absolute', bottom: '10px', right: '10px', background: 'var(--primary)', color: 'white', padding: '6px 12px', borderRadius: '30px', cursor: 'pointer', fontSize: '11px', fontWeight: 700, boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
+                                        تغيير الرابط
+                                        <input type="file" hidden accept="image/*" onChange={handleFileChange} />
+                                    </label>
+                                </div>
                             </div>
 
                             <button 
-                                onClick={handleSaveImage}
-                                disabled={uploading || !newImageFile}
+                                onClick={handleSaveCategory}
+                                disabled={uploading}
                                 style={{ 
                                     width: '100%', 
                                     padding: '16px', 
@@ -275,7 +335,7 @@ export default function Cours() {
                                 }}
                             >
                                 <Save size={20} />
-                                {uploading ? 'جاري الرفع والحفظ...' : 'حفظ التغييرات'}
+                                {uploading ? 'جاري الحفظ...' : 'حفظ جميع التغييرات'}
                             </button>
                         </div>
                     </div>

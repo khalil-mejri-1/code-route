@@ -7,7 +7,7 @@ import { Lock, ArrowLeft, Trophy, BookOpen, Settings, Upload, X, Save } from 'lu
 import { IMGBB_API_KEY, IMGBB_UPLOAD_URL } from '../config';
 
 // ===== كارد الدروس العادية =====
-function TopicCard({ id, idDoc, category, image, isLoggedIn, isSubscribed, mainCategory, isAdmin, onEditImage }) {
+function TopicCard({ id, idDoc, category, image, isLoggedIn, isSubscribed, mainCategory, isAdmin, onEditContent }) {
     let isCardDisabled;
     let overlayMessage;
 
@@ -28,34 +28,6 @@ function TopicCard({ id, idDoc, category, image, isLoggedIn, isSubscribed, mainC
 
     return (
         <Wrapper {...linkProps} className={`premium-card reveal-anim ${isCardDisabled ? 'disabled' : ''}`} style={{ position: 'relative' }}>
-            {isAdmin && (
-                <button 
-                    onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        onEditImage({ id: idDoc, name: category, image: image });
-                    }}
-                    style={{ 
-                        position: 'absolute', 
-                        top: '15px', 
-                        right: '15px', 
-                        zIndex: 20, 
-                        background: 'rgba(255,255,255,0.9)', 
-                        border: 'none', 
-                        borderRadius: '50%', 
-                        width: '32px', 
-                        height: '32px', 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center', 
-                        color: 'var(--primary)',
-                        cursor: 'pointer',
-                        boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
-                    }}
-                >
-                    <Settings size={16} />
-                </button>
-            )}
             <div className="card-img-wrapper">
                 <img src={image} alt={category} />
                 {isCardDisabled && (
@@ -80,7 +52,21 @@ function TopicCard({ id, idDoc, category, image, isLoggedIn, isSubscribed, mainC
                 <h3 className="card-title-premium" style={{ marginBottom: '8px' }}>{category}</h3>
                 <p className="card-desc-premium">استكشف قواعد {category} ضمن صنف {mainCategory} بأسلوب تعليمي متطور.</p>
                 <div style={{ marginTop: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: '12px', color: 'var(--text-dim)', fontWeight: 600 }}>ابدأ الآن</span>
+                    {isAdmin ? (
+                        <button 
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                onEditContent({ id: idDoc, name: category, image: image });
+                            }}
+                            className="btn-premium-sm"
+                            style={{ padding: '6px 14px', fontSize: '11px', background: 'var(--bg-accent)', color: 'var(--primary)', border: '1px solid var(--primary-glow)', borderRadius: '10px' }}
+                        >
+                            تعديل
+                        </button>
+                    ) : (
+                        <span style={{ fontSize: '12px', color: 'var(--text-dim)', fontWeight: 600 }}>ابدأ الآن</span>
+                    )}
                     <div className="card-nav-btn"><ArrowLeft size={18} /></div>
                 </div>
             </div>
@@ -166,6 +152,7 @@ export default function Cours_question() {
     const [uploading, setUploading] = useState(false);
     const [previewUrl, setPreviewUrl] = useState('');
     const [newImageFile, setNewImageFile] = useState(null);
+    const [editTopicName, setEditTopicName] = useState('');
 
     const location = useLocation();
 
@@ -187,9 +174,10 @@ export default function Cours_question() {
         fetchTopics();
     }, [mainCategory]);
 
-    const openUploadModal = (topic) => {
+    const openEditModal = (topic) => {
         setSelectedTopic(topic);
         setPreviewUrl(topic.image);
+        setEditTopicName(topic.name);
         setNewImageFile(null);
         setShowModal(true);
     };
@@ -221,21 +209,24 @@ export default function Cours_question() {
         throw new Error('فشل رفع الصورة');
     };
 
-    const handleSaveImage = async () => {
-        if (!newImageFile) return alert("يرجى اختيار صورة أولاً");
-        
+    const handleSaveTopic = async () => {
         setUploading(true);
         try {
-            const uploadedUrl = await uploadToImgBB(newImageFile);
+            let uploadedUrl = selectedTopic.image;
+            if (newImageFile) {
+                uploadedUrl = await uploadToImgBB(newImageFile);
+            }
+            
             await axios.put(`${API_BASE_URL}/topics/${selectedTopic.id}`, {
+                name: editTopicName,
                 image: uploadedUrl
             });
             setShowModal(false);
             fetchTopics();
-            alert("✅ تم تحديث صورة الدرس بنجاح!");
+            alert("✅ تم تحديث بيانات الموضوع بنجاح!");
         } catch (err) {
             console.error(err);
-            alert("❌ فشل تحديث الصورة.");
+            alert("❌ فشل تحديث البيانات.");
         } finally {
             setUploading(false);
         }
@@ -279,7 +270,7 @@ export default function Cours_question() {
                                 isSubscribed={isSubscribed}
                                 mainCategory={mainCategory}
                                 isAdmin={isAdmin}
-                                onEditImage={openUploadModal}
+                                onEditContent={openEditModal}
                             />
                         ))}
                     </div>
@@ -287,7 +278,7 @@ export default function Cours_question() {
 
                 {showModal && (
                     <div className="overlay-premium" style={{ opacity: 1, zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.8)' }}>
-                        <div className="reveal-anim" style={{ background: 'white', width: '90%', maxWidth: '500px', borderRadius: '24px', padding: '35px', position: 'relative', textAlign: 'center' }}>
+                        <div className="reveal-anim" style={{ background: 'white', width: '95%', maxWidth: '500px', borderRadius: '24px', padding: '35px', position: 'relative', textAlign: 'center', maxHeight: '90vh', overflowY: 'auto' }}>
                             <button 
                                 onClick={() => setShowModal(false)}
                                 style={{ position: 'absolute', top: '20px', left: '20px', background: 'none', border: 'none', color: '#999', cursor: 'pointer' }}
@@ -297,27 +288,39 @@ export default function Cours_question() {
                             
                             <div style={{ marginBottom: '25px' }}>
                                 <div style={{ width: '60px', height: '60px', background: 'var(--secondary-glow)', borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--secondary)', margin: '0 auto 15px' }}>
-                                    <Upload size={30} />
+                                    <Settings size={30} />
                                 </div>
-                                <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#1a202c', marginBottom: '8px' }}>تحديث صورة الدرس</h2>
-                                <p style={{ color: '#718096', fontSize: '14px' }}>الموضوع: {selectedTopic?.name}</p>
+                                <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#1a202c', marginBottom: '8px' }}>تعديل موضوع الدرس</h2>
                             </div>
 
-                            <div style={{ width: '100%', height: '200px', background: '#f7fafc', borderRadius: '16px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px dashed #e2e8f0', marginBottom: '25px', position: 'relative' }}>
-                                {previewUrl ? (
-                                    <img src={previewUrl} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                                ) : (
-                                    <span style={{ color: '#a0aec0' }}>لم يتم اختيار صورة</span>
-                                )}
-                                <label style={{ position: 'absolute', bottom: '10px', right: '10px', background: 'var(--secondary)', color: 'white', padding: '8px 15px', borderRadius: '30px', cursor: 'pointer', fontSize: '12px', fontWeight: 700, boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
-                                    اختار صورة
-                                    <input type="file" hidden accept="image/*" onChange={handleFileChange} />
-                                </label>
+                            <div style={{ textAlign: 'right', marginBottom: '20px' }}>
+                                <label style={{ display: 'block', fontSize: '14px', fontWeight: 700, marginBottom: '8px', color: '#4a5568' }}>اسم الموضوع:</label>
+                                <input 
+                                    type="text" 
+                                    value={editTopicName}
+                                    onChange={(e) => setEditTopicName(e.target.value)}
+                                    style={{ width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '10px', fontSize: '15px' }}
+                                />
+                            </div>
+
+                            <div style={{ textAlign: 'right', marginBottom: '25px' }}>
+                                <label style={{ display: 'block', fontSize: '14px', fontWeight: 700, marginBottom: '8px', color: '#4a5568' }}>صورة الموضوع:</label>
+                                <div style={{ width: '100%', height: '180px', background: '#f7fafc', borderRadius: '16px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px dashed #e2e8f0', position: 'relative' }}>
+                                    {previewUrl ? (
+                                        <img src={previewUrl} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                    ) : (
+                                        <span style={{ color: '#a0aec0' }}>لم يتم اختيار صورة</span>
+                                    )}
+                                    <label style={{ position: 'absolute', bottom: '10px', right: '10px', background: 'var(--secondary)', color: 'white', padding: '8px 15px', borderRadius: '30px', cursor: 'pointer', fontSize: '12px', fontWeight: 700, boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
+                                        تغيير الصورة
+                                        <input type="file" hidden accept="image/*" onChange={handleFileChange} />
+                                    </label>
+                                </div>
                             </div>
 
                             <button 
-                                onClick={handleSaveImage}
-                                disabled={uploading || !newImageFile}
+                                onClick={handleSaveTopic}
+                                disabled={uploading}
                                 style={{ 
                                     width: '100%', 
                                     padding: '16px', 
@@ -336,7 +339,7 @@ export default function Cours_question() {
                                 }}
                             >
                                 <Save size={20} />
-                                {uploading ? 'جاري الرفع والحفظ...' : 'حفظ التغييرات'}
+                                {uploading ? 'جاري الحفظ...' : 'حفظ التغييرات'}
                             </button>
                         </div>
                     </div>

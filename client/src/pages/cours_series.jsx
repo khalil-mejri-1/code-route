@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Navbar from '../comp/navbar';
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
-import { Lock, Play, CircleCheckBig, Trophy, ArrowLeft } from 'lucide-react';
+import { Lock, Play, CircleCheckBig, Trophy, ArrowLeft, X, Save, Settings } from 'lucide-react';
 
 const parseCategoryParam = (param) => {
     if (!param) return { category1: '', category2: '' };
@@ -23,7 +23,7 @@ const parseCategoryParam = (param) => {
 };
 
 // ===== كارد السلسلة =====
-function SerieCard({ serieNum, isLocked, categoryParam, isLoggedIn }) {
+function SerieCard({ serieNum, serieName, serieSubName, isLocked, categoryParam, isLoggedIn, isAdmin, onEdit }) {
     const [isChecked, setIsChecked] = useState(() => {
         const saved = localStorage.getItem(`checked_serie_${categoryParam}_${serieNum}`);
         return saved === 'true';
@@ -41,6 +41,7 @@ function SerieCard({ serieNum, isLocked, categoryParam, isLoggedIn }) {
         <Link
             to={!isLocked ? `/serie?category=${encodeURIComponent(categoryParam)}&nb_serie=${serieNum}` : '#'}
             className={`premium-card reveal-anim ${isLocked ? 'disabled' : ''}`}
+            style={{ position: 'relative' }}
             onClick={(e) => {
                 if (isLocked) {
                     e.preventDefault();
@@ -61,9 +62,35 @@ function SerieCard({ serieNum, isLocked, categoryParam, isLoggedIn }) {
                 <div style={{ width: '60px', height: '60px', background: 'var(--bg-accent)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', marginBottom: '20px' }}>
                     <Play size={24} fill="currentColor" />
                 </div>
-                <h3 className="card-title-premium" style={{ fontSize: '28px', marginBottom: '8px' }}>السلسلة {serieNum}</h3>
+                <h3 className="card-title-premium" style={{ fontSize: '28px', marginBottom: '4px' }}>{serieName}</h3>
+                {serieSubName && (
+                    <p style={{ color: 'var(--primary)', fontSize: '24px', fontWeight: 800, marginBottom: '12px' }}>{serieSubName}</p>
+                )}
                 <p style={{ color: 'var(--text-gray)', fontSize: '14px' }}>انقر للبدء في دراسة هذه السلسلة</p>
                 
+                <div style={{ marginTop: '20px', width: '100%' }}>
+                    {isAdmin && (
+                        <button 
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                onEdit({ num: serieNum, name: serieName, subName: serieSubName });
+                            }}
+                            className="btn-premium-sm"
+                            style={{ 
+                                background: 'rgba(255,255,255,0.1)', 
+                                border: '1px solid rgba(255,255,255,0.2)', 
+                                color: 'white',
+                                fontSize: '12px',
+                                padding: '6px 15px',
+                                borderRadius: '10px'
+                            }}
+                        >
+                            تعديل السلسلة
+                        </button>
+                    )}
+                </div>
+
                 <div 
                     onClick={toggleCheck}
                     style={{ 
@@ -131,47 +158,57 @@ function TopicExamCard({ category1, category2, isSubscribed, isLoggedIn }) {
                 </div>
             )}
 
-            <div className="card-body-premium" style={{
-                position: 'relative', zIndex: 1,
-                display: 'flex', flexDirection: 'column', alignItems: 'center',
-                textAlign: 'center', minHeight: '220px', justifyContent: 'center', gap: '16px'
+            <div style={{ 
+                background: 'var(--bg-accent)', borderRadius: '24px', overflow: 'hidden', 
+                height: '100%', display: 'flex', flexDirection: 'column',
+                border: '1px solid var(--glass-border)', boxShadow: '0 15px 35px -10px rgba(0,0,0,0.3)'
             }}>
-                <div style={{
-                    width: '64px', height: '64px',
-                    background: 'linear-gradient(135deg, var(--primary), var(--secondary))',
-                    borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: 'white', boxShadow: '0 10px 25px -5px var(--secondary-glow)'
+                {/* الجزء العلوي: الصورة */}
+                <div style={{ width: '100%', height: '160px', position: 'relative' }}>
+                    <img 
+                        src="https://i.ibb.co/7xmxRRMm/e0905461a321.jpg" 
+                        alt="Exam" 
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                    <div style={{ 
+                        position: 'absolute', bottom: 0, left: 0, right: 0, height: '40px',
+                        background: 'linear-gradient(to top, var(--bg-accent), transparent)'
+                    }}></div>
+                </div>
+
+                {/* الجزء السفلي: النصوص والأزرار */}
+                <div className="card-body-premium" style={{ 
+                    padding: '20px', flex: 1, display: 'flex', flexDirection: 'column', 
+                    alignItems: 'center', textAlign: 'center', justifyContent: 'space-between', gap: '15px'
                 }}>
-                    <Trophy size={28} />
-                </div>
-
-                <div>
-                    <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--secondary)', textTransform: 'uppercase', letterSpacing: '1.5px', display: 'block', marginBottom: '8px' }}>
-                        اختبار الموضوع
-                    </span>
-                    <h3 className="card-title-premium" style={{ fontSize: '24px', marginBottom: '8px' }}>
-                        اختبر مستواك 🏆
-                    </h3>
-                    <p style={{ color: 'var(--text-gray)', fontSize: '14px', lineHeight: '1.6', maxWidth: '260px' }}>
-                        خض اختبار تقييمي شامل لجميع سلاسل هذا الموضوع
-                    </p>
-                </div>
-
-                {!isSubscribed && (
-                    <div style={{
-                        background: 'rgba(139, 92, 246, 0.1)', border: '1px solid rgba(139, 92, 246, 0.25)',
-                        borderRadius: '10px', padding: '8px 16px', fontSize: '12px', color: 'var(--secondary)', fontWeight: 700
-                    }}>
-                        ⚡ أول 5 أسئلة مجانية
+                    <div>
+                        <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--secondary)', textTransform: 'uppercase', letterSpacing: '1.5px', display: 'block', marginBottom: '5px' }}>
+                            اختبار الموضوع
+                        </span>
+                        <h3 className="card-title-premium" style={{ fontSize: '22px', marginBottom: '5px' }}>
+                            اختبر مستواك 🏆
+                        </h3>
+                        <p style={{ color: 'var(--text-gray)', fontSize: '14px', lineHeight: '1.4' }}>
+                            خض اختبار تقييمي شامل لجميع سلاسل هذا الموضوع
+                        </p>
                     </div>
-                )}
 
-                <div className="card-nav-btn" style={{
-                    background: 'linear-gradient(135deg, var(--primary), var(--secondary))',
-                    color: 'white', borderColor: 'transparent',
-                    boxShadow: '0 8px 20px -5px var(--primary-glow)'
-                }}>
-                    <ArrowLeft size={18} />
+                    {!isSubscribed && (
+                        <div style={{
+                            background: 'rgba(139, 92, 246, 0.1)', border: '1px solid rgba(139, 92, 246, 0.2)',
+                            borderRadius: '10px', padding: '6px 12px', fontSize: '11px', color: 'var(--secondary)', fontWeight: 700
+                        }}>
+                            ⚡ أول 5 أسئلة مجانية
+                        </div>
+                    )}
+
+                    <div className="card-nav-btn" style={{
+                        background: 'linear-gradient(135deg, var(--primary), var(--secondary))',
+                        color: 'white', border: 'none', width: '45px', height: '45px',
+                        boxShadow: '0 8px 15px -5px var(--primary-glow)', alignSelf: 'center'
+                    }}>
+                        <ArrowLeft size={18} />
+                    </div>
                 </div>
             </div>
         </Link>
@@ -184,6 +221,15 @@ export default function CoursSeries() {
     const [series, setSeries] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [showModal, setShowModal] = useState(false);
+    const [selectedSerieNum, setSelectedSerieNum] = useState(null);
+    const [newSerieNum, setNewSerieNum] = useState('');
+    const [serieName, setSerieName] = useState('');
+    const [serieSubName, setSerieSubName] = useState('');
+    const [targetCategory, setTargetCategory] = useState('');
+    const [updating, setUpdating] = useState(false);
+
+    const LICENSE_TYPES = ["B", "A", "AA", "Z", "D", "CE", "C", "امتحانات"];
 
     const urlParams = new URLSearchParams(location.search);
     const categoryParam = urlParams.get('category');
@@ -191,28 +237,64 @@ export default function CoursSeries() {
 
     const isLoggedIn = localStorage.getItem('login') === 'true';
     const isSubscribed = localStorage.getItem('subscriptions') === 'true';
+    const isAdmin = localStorage.getItem('role') === 'admin' || localStorage.getItem('login') === 'true';
+
+    const fetchSeries = async () => {
+        if (!category1) {
+            setError('فئة غير صحيحة.');
+            setLoading(false);
+            return;
+        }
+        try {
+            const response = await axios.get(`${API_BASE_URL}/quiz/series`, {
+                params: { category1, category2 }
+            });
+            setSeries(response.data);
+        } catch (err) {
+            console.error("Error fetching series:", err);
+            setError('فشل في جلب السلاسل.');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchSeries = async () => {
-            if (!category1) {
-                setError('فئة غير صحيحة.');
-                setLoading(false);
-                return;
-            }
-            try {
-                const response = await axios.get(`${API_BASE_URL}/quiz/series`, {
-                    params: { category1, category2 }
-                });
-                setSeries(response.data);
-            } catch (err) {
-                console.error("Error fetching series:", err);
-                setError('فشل في جلب السلاسل.');
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchSeries();
     }, [category1, category2]);
+
+    const openEditModal = (serie) => {
+        setSelectedSerieNum(serie.num);
+        setNewSerieNum(serie.num);
+        setSerieName(serie.name);
+        setSerieSubName(serie.subName || '');
+        setTargetCategory(category1); // الافتراضي هو الصنف الحالي
+        setShowModal(true);
+    };
+
+    const handleUpdateSeries = async () => {
+        if (!newSerieNum || isNaN(newSerieNum)) return alert("يرجى إدخال رقم صحيح.");
+        
+        setUpdating(true);
+        try {
+            await axios.put(`${API_BASE_URL}/quiz/series/rename`, {
+                category1,
+                category2,
+                oldSerieNum: selectedSerieNum,
+                newSerieNum: parseInt(newSerieNum),
+                serieName: serieName,
+                serieSubName: serieSubName,
+                newCategory1: targetCategory !== category1 ? targetCategory : undefined
+            });
+            setShowModal(false);
+            fetchSeries();
+            alert("✅ تم تحديث بيانات السلسلة بنجاح!");
+        } catch (err) {
+            console.error(err);
+            alert("❌ فشل تحديث السلسلة.");
+        } finally {
+            setUpdating(false);
+        }
+    };
 
     return (
         <div style={{ background: 'var(--bg-deep)', minHeight: '100vh' }}>
@@ -232,13 +314,17 @@ export default function CoursSeries() {
                     <>
                         {/* سلاسل الدروس */}
                         <div className="cards-grid">
-                            {series.map((serieNum) => (
+                            {series.map((s) => (
                                 <SerieCard
-                                    key={serieNum}
-                                    serieNum={serieNum}
-                                    isLocked={!isSubscribed && serieNum > 1}
+                                    key={s.nb_serie}
+                                    serieNum={s.nb_serie}
+                                    serieName={s.serieName}
+                                    serieSubName={s.serieSubName}
+                                    isLocked={!isSubscribed && s.nb_serie > 1}
                                     categoryParam={categoryParam}
                                     isLoggedIn={isLoggedIn}
+                                    isAdmin={isAdmin}
+                                    onEdit={openEditModal}
                                 />
                             ))}
                         </div>
@@ -261,6 +347,96 @@ export default function CoursSeries() {
                             </div>
                         )}
                     </>
+                )}
+
+                {/* MODAL للتعديل */}
+                {showModal && (
+                    <div className="overlay-premium" style={{ opacity: 1, zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.8)' }}>
+                        <div className="reveal-anim" style={{ background: 'white', width: '95%', maxWidth: '400px', borderRadius: '24px', padding: '35px', position: 'relative', textAlign: 'center' }}>
+                            <button 
+                                onClick={() => setShowModal(false)}
+                                style={{ position: 'absolute', top: '20px', left: '20px', background: 'none', border: 'none', color: '#999', cursor: 'pointer' }}
+                            >
+                                <X size={24} />
+                            </button>
+                            
+                            <div style={{ marginBottom: '25px' }}>
+                                <div style={{ width: '60px', height: '60px', background: 'var(--bg-accent)', borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', margin: '0 auto 15px' }}>
+                                    <Settings size={30} />
+                                </div>
+                                <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#1a202c', marginBottom: '8px' }}>تعديل السلسلة</h2>
+                                <p style={{ color: '#718096', fontSize: '14px' }}>أنت الآن تقوم بتعديل السلسلة: {serieName}</p>
+                            </div>
+
+                            <div style={{ textAlign: 'right', marginBottom: '20px' }}>
+                                <label style={{ display: 'block', fontSize: '14px', fontWeight: 700, marginBottom: '8px', color: '#4a5568' }}>نقل إلى فئة أخرى:</label>
+                                <select 
+                                    value={targetCategory}
+                                    onChange={(e) => setTargetCategory(e.target.value)}
+                                    style={{ width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '10px', fontSize: '15px', background: 'white' }}
+                                >
+                                    {LICENSE_TYPES.map(type => (
+                                        <option key={type} value={type}>صنف {type}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div style={{ textAlign: 'right', marginBottom: '20px' }}>
+                                <label style={{ display: 'block', fontSize: '14px', fontWeight: 700, marginBottom: '8px', color: '#4a5568' }}>اسم السلسلة:</label>
+                                <input 
+                                    type="text" 
+                                    value={serieName}
+                                    onChange={(e) => setSerieName(e.target.value)}
+                                    style={{ width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '10px', fontSize: '15px' }}
+                                    placeholder="مثال: السلسلة 1"
+                                />
+                            </div>
+
+                            <div style={{ textAlign: 'right', marginBottom: '20px' }}>
+                                <label style={{ display: 'block', fontSize: '14px', fontWeight: 700, marginBottom: '8px', color: '#4a5568' }}>الاسم الفرعي (مثل AA):</label>
+                                <input 
+                                    type="text" 
+                                    value={serieSubName}
+                                    onChange={(e) => setSerieSubName(e.target.value)}
+                                    style={{ width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '10px', fontSize: '15px' }}
+                                    placeholder="مثال: AA"
+                                />
+                            </div>
+
+                            <div style={{ textAlign: 'right', marginBottom: '25px' }}>
+                                <label style={{ display: 'block', fontSize: '14px', fontWeight: 700, marginBottom: '8px', color: '#4a5568' }}>رقم السلسلة (للترتيب):</label>
+                                <input 
+                                    type="number" 
+                                    value={newSerieNum}
+                                    onChange={(e) => setNewSerieNum(e.target.value)}
+                                    style={{ width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '10px', fontSize: '16px', textAlign: 'center' }}
+                                />
+                            </div>
+
+                            <button 
+                                onClick={handleUpdateSeries}
+                                disabled={updating}
+                                style={{ 
+                                    width: '100%', 
+                                    padding: '16px', 
+                                    borderRadius: '16px', 
+                                    background: updating ? '#cbd5e0' : 'var(--primary)', 
+                                    color: 'white', 
+                                    border: 'none', 
+                                    fontWeight: 800, 
+                                    fontSize: '16px', 
+                                    cursor: updating ? 'not-allowed' : 'pointer',
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    justifyContent: 'center', 
+                                    gap: '10px'
+                                }}
+                            >
+                                <Save size={20} />
+                                {updating ? 'جاري التحديث...' : 'حفظ التغييرات'}
+                            </button>
+                        </div>
+                    </div>
                 )}
             </div>
         </div>
