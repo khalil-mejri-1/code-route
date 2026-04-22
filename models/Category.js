@@ -16,6 +16,10 @@ const categorySchema = new mongoose.Schema({
         type: String,
         default: 'https://www.codedelaroute.tn/images/b.png'
     },
+    order: {
+        type: Number,
+        default: 0
+    },
     createdAt: {
         type: Date,
         default: Date.now
