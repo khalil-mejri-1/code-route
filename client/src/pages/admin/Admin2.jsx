@@ -76,7 +76,7 @@ export default function Admin2() {
     const [allCategories, setAllCategories] = useState([]);
     const [editingCategory, setEditingCategory] = useState(null); // { _id, category, description, image }
     const [catMessage, setCatMessage] = useState('');
-    const [newCategory, setNewCategory] = useState({ category: '', description: '', image: '' });
+    const [newCategory, setNewCategory] = useState({ category: '', description: '', image: '', order: 0 });
     const [addingCategory, setAddingCategory] = useState(false);
 
 
@@ -114,7 +114,7 @@ export default function Admin2() {
         try {
             await axios.post(`${API_BASE_URL}/categories`, newCategory);
             setCatMessage('تمت إضافة الفئة بنجاح!');
-            setNewCategory({ category: '', description: '', image: '' });
+            setNewCategory({ category: '', description: '', image: '', order: 0 });
             fetchAllCategories();
             setTimeout(() => setCatMessage(''), 2000);
         } catch (err) {
@@ -552,7 +552,9 @@ export default function Admin2() {
                                 style={styles.input}
                             >
                                 {allCategories.length > 0 ? (
-                                    allCategories.map(c => <option key={c._id} value={c.category}>{c.category}</option>)
+                                    allCategories
+                                        .sort((a, b) => (a.order || 0) - (b.order || 0))
+                                        .map(c => <option key={c._id} value={c.category}>{c.category}</option>)
                                 ) : (
                                     LICENSE_TYPES.map(t => <option key={t} value={t}>{t}</option>)
                                 )}
@@ -615,6 +617,13 @@ export default function Admin2() {
                                     onChange={e => setNewCategory({ ...newCategory, description: e.target.value })}
                                     placeholder="الوصف"
                                 />
+                                <input
+                                    type="number"
+                                    style={{ ...styles.input, marginBottom: '5px' }}
+                                    value={newCategory.order}
+                                    onChange={e => setNewCategory({ ...newCategory, order: e.target.value })}
+                                    placeholder="الترتيب (Order)"
+                                />
                                 <button
                                     onClick={handleAddCategory}
                                     disabled={addingCategory}
@@ -625,8 +634,9 @@ export default function Admin2() {
                             </div>
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '15px' }}>
-
-                                {allCategories.map(cat => (
+                                {allCategories
+                                    .sort((a, b) => (a.order || 0) - (b.order || 0))
+                                    .map(cat => (
                                     <div key={cat._id} style={{ padding: '10px', border: '1px solid #eee', borderRadius: '5px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                         {editingCategory?._id === cat._id ? (
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', width: '100%' }}>
@@ -641,6 +651,13 @@ export default function Admin2() {
                                                     value={editingCategory.description}
                                                     onChange={e => setEditingCategory({ ...editingCategory, description: e.target.value })}
                                                     placeholder="الوصف"
+                                                />
+                                                <input
+                                                    type="number"
+                                                    style={{ ...styles.input, marginBottom: '5px' }}
+                                                    value={editingCategory.order}
+                                                    onChange={e => setEditingCategory({ ...editingCategory, order: e.target.value })}
+                                                    placeholder="الترتيب"
                                                 />
                                                 <div style={{ display: 'flex', gap: '5px' }}>
                                                     <button onClick={() => handleUpdateCategory(cat._id)} style={{ ...styles.button, backgroundColor: '#28a745', flex: 1 }}>حفظ</button>
@@ -678,7 +695,9 @@ export default function Admin2() {
                                 style={styles.input}
                             >
                                 {allCategories.length > 0 ? (
-                                    allCategories.map(c => <option key={c._id} value={c.category}>{c.category}</option>)
+                                    allCategories
+                                        .sort((a, b) => (a.order || 0) - (b.order || 0))
+                                        .map(c => <option key={c._id} value={c.category}>{c.category}</option>)
                                 ) : (
                                     LICENSE_TYPES.map(t => <option key={t} value={t}>{t}</option>)
                                 )}

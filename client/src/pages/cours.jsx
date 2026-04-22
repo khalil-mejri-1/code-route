@@ -138,6 +138,7 @@ export default function Cours() {
     const [newImageFile, setNewImageFile] = useState(null);
     const [editCategoryName, setEditCategoryName] = useState('');
     const [editDescription, setEditDescription] = useState('');
+    const [editOrder, setEditOrder] = useState(0);
 
     const fetchCategories = async () => {
         try {
@@ -159,6 +160,7 @@ export default function Cours() {
         setPreviewUrl(cat.image);
         setEditCategoryName(cat.category);
         setEditDescription(cat.description);
+        setEditOrder(cat.order || 0);
         setNewImageFile(null);
         setShowModal(true);
     };
@@ -212,7 +214,8 @@ export default function Cours() {
             await axios.put(`${API_BASE_URL}/categories/${selectedCategory.id}`, {
                 category: editCategoryName,
                 description: editDescription,
-                image: uploadedUrl
+                image: uploadedUrl,
+                order: parseInt(editOrder)
             });
             setShowModal(false);
             fetchCategories();
@@ -246,7 +249,9 @@ export default function Cours() {
                 </div>
 
                 <div className="cards-grid">
-                    {licenseCategories.map((item, index) => (
+                    {licenseCategories
+                        .sort((a, b) => (a.order || 0) - (b.order || 0))
+                        .map((item, index) => (
                         <CardComponent
                             key={index}
                             id={item._id}
@@ -297,6 +302,16 @@ export default function Cours() {
                                     rows="3"
                                     style={{ width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '10px', fontSize: '15px', fontFamily: 'inherit' }}
                                 ></textarea>
+                            </div>
+
+                            <div style={{ textAlign: 'right', marginBottom: '20px' }}>
+                                <label style={{ display: 'block', fontSize: '14px', fontWeight: 700, marginBottom: '8px', color: '#4a5568' }}>الترتيب (Order):</label>
+                                <input 
+                                    type="number" 
+                                    value={editOrder}
+                                    onChange={(e) => setEditOrder(e.target.value)}
+                                    style={{ width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '10px', fontSize: '15px' }}
+                                />
                             </div>
 
                             <div style={{ textAlign: 'right', marginBottom: '25px' }}>

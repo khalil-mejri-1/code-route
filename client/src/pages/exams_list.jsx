@@ -250,9 +250,11 @@ export default function ExamsList() {
                                                     onChange={(e) => updateRule(idx, 'categorySource', e.target.value)}
                                                     style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '14px', fontWeight: 600, background: 'white' }}
                                                 >
-                                                    {allCategories.map(cat => (
-                                                        <option key={cat._id} value={cat.category}>{cat.category}</option>
-                                                    ))}
+                                                    {allCategories
+                                                        .sort((a, b) => (a.order || 0) - (b.order || 0))
+                                                        .map(cat => (
+                                                            <option key={cat._id} value={cat.category}>{cat.category}</option>
+                                                        ))}
                                                 </select>
                                             </div>
                                             <div style={{ flex: 1 }}>

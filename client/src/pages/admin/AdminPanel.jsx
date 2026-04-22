@@ -9,7 +9,7 @@ const AdminPanel = () => {
     const [categories, setCategories] = useState([]);
     const [topics, setTopics] = useState([]);
     const [users, setUsers] = useState([]);
-    const [newCategory, setNewCategory] = useState({ category: '', description: '', image: '' });
+    const [newCategory, setNewCategory] = useState({ category: '', description: '', image: '', order: 0 });
     const [newTopic, setNewTopic] = useState({ name: '', category: '', image: '' });
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
@@ -99,7 +99,7 @@ const AdminPanel = () => {
         try {
             await axios.post(`${API_BASE_URL}/categories`, newCategory);
             setMessage('تم إضافة الصنف بنجاح');
-            setNewCategory({ category: '', description: '', image: '' });
+            setNewCategory({ category: '', description: '', image: '', order: 0 });
             fetchCategories();
         } catch (err) {
             setMessage('فشل في إضافة الصنف');
@@ -203,6 +203,12 @@ const AdminPanel = () => {
                                             placeholder="وصف الصنف"
                                             required
                                         />
+                                        <input
+                                            type="number"
+                                            value={editingItem.data.order}
+                                            onChange={(e) => setEditingItem({ ...editingItem, data: { ...editingItem.data, order: e.target.value } })}
+                                            placeholder="الترتيب"
+                                        />
                                     </>
                                 ) : (
                                     <>
@@ -219,7 +225,9 @@ const AdminPanel = () => {
                                             required
                                             style={{ padding: '12px', borderRadius: '8px', background: '#0f172a', color: 'white', border: '1px solid #334155' }}
                                         >
-                                            {categories.map(cat => (
+                                            {categories
+                                                .sort((a, b) => (a.order || 0) - (b.order || 0))
+                                                .map(cat => (
                                                 <option key={cat._id} value={cat.category}>{cat.category}</option>
                                             ))}
                                         </select>
@@ -297,6 +305,12 @@ const AdminPanel = () => {
                                 onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
                                 required
                             />
+                            <input
+                                type="number"
+                                placeholder="الترتيب (Order)"
+                                value={newCategory.order}
+                                onChange={(e) => setNewCategory({ ...newCategory, order: e.target.value })}
+                            />
                             <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
                                 <input
                                     type="text"
@@ -329,7 +343,9 @@ const AdminPanel = () => {
 
                         <h2>الأصناف الحالية</h2>
                         <div className="admin-grid">
-                            {categories.map(cat => (
+                            {categories
+                                .sort((a, b) => (a.order || 0) - (b.order || 0))
+                                .map(cat => (
                                 <div key={cat._id} className="admin-card">
                                     <img src={cat.image || 'https://via.placeholder.com/150'} alt={cat.category} />
                                     <div className="admin-card-info">
@@ -365,7 +381,9 @@ const AdminPanel = () => {
                                 style={{ padding: '12px', borderRadius: '8px', background: '#0f172a', color: 'white', border: '1px solid #334155' }}
                             >
                                 <option value="">اختر الصنف التابع له</option>
-                                {categories.map(cat => (
+                                {categories
+                                    .sort((a, b) => (a.order || 0) - (b.order || 0))
+                                    .map(cat => (
                                     <option key={cat._id} value={cat.category}>{cat.category}</option>
                                 ))}
                             </select>
