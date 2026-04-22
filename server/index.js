@@ -717,16 +717,16 @@ app.get('/api/categories', async (req, res) => {
         // إذا كانت القائمة فارغة، يمكننا إضافة الفئات الافتراضية
         if (categories.length === 0) {
             const defaultCategories = [
-                { category: "B", description: "دروس في B", image: "https://www.codedelaroute.tn/images/b.png", order: 1 },
-                { category: "A / A1", description: "دروس في A / A1", image: "https://www.codedelaroute.tn/images/a.png", order: 2 },
-                { category: "A1 / AM", description: "دروس في A1 / AM", image: "https://www.codedelaroute.tn/images/a1.png", order: 3 },
-                { category: "B+E", description: "دروس في B+E", image: "https://www.codedelaroute.tn/images/b+e.png", order: 4 },
-                { category: "C / C1", description: "دروس في C / C1", image: "https://www.codedelaroute.tn/images/c.png", order: 5 },
-                { category: "C+E / C1+E", description: "دروس في C+E / C1+E", image: "https://www.codedelaroute.tn/images/c+e.png", order: 6 },
-                { category: "D", description: "دروس في D", image: "https://www.codedelaroute.tn/images/d.png", order: 7 },
-                { category: "D1", description: "دروس في D1", image: "https://www.codedelaroute.tn/images/d1.png", order: 8 },
-                { category: "D+E / D1+E", description: "دروس في D+E / D1+E", image: "https://www.codedelaroute.tn/images/d+e.png", order: 9 },
-                { category: "امتحانات", description: "امتحانات تجريبية", image: "https://www.codedelaroute.tn/images/exam.png", order: 10 },
+                { category: "B", description: "دروس في B", image: "https://www.codedelaroute.tn/images/b.png", order: 1, visible: true },
+                { category: "A / A1", description: "دروس في A / A1", image: "https://www.codedelaroute.tn/images/a.png", order: 2, visible: true },
+                { category: "A1 / AM", description: "دروس في A1 / AM", image: "https://www.codedelaroute.tn/images/a1.png", order: 3, visible: true },
+                { category: "B+E", description: "دروس في B+E", image: "https://www.codedelaroute.tn/images/b+e.png", order: 4, visible: true },
+                { category: "C / C1", description: "دروس في C / C1", image: "https://www.codedelaroute.tn/images/c.png", order: 5, visible: true },
+                { category: "C+E / C1+E", description: "دروس في C+E / C1+E", image: "https://www.codedelaroute.tn/images/c+e.png", order: 6, visible: true },
+                { category: "D", description: "دروس في D", image: "https://www.codedelaroute.tn/images/d.png", order: 7, visible: true },
+                { category: "D1", description: "دروس في D1", image: "https://www.codedelaroute.tn/images/d1.png", order: 8, visible: true },
+                { category: "D+E / D1+E", description: "دروس في D+E / D1+E", image: "https://www.codedelaroute.tn/images/d+e.png", order: 9, visible: true },
+                { category: "امتحانات", description: "امتحانات تجريبية", image: "https://www.codedelaroute.tn/images/exam.png", order: 10, visible: true },
             ];
             categories = await Category.insertMany(defaultCategories);
         }
@@ -740,8 +740,8 @@ app.get('/api/categories', async (req, res) => {
 // 3. إضافة فئة جديدة
 app.post('/api/categories', async (req, res) => {
     try {
-        const { category, description, image, order } = req.body;
-        const newCategory = new Category({ category, description, image, order: order || 0 });
+        const { category, description, image, order, visible } = req.body;
+        const newCategory = new Category({ category, description, image, order: order || 0, visible: visible !== undefined ? visible : true });
         await newCategory.save();
         res.status(201).json({ message: 'تم إضافة الفئة بنجاح!', category: newCategory });
     } catch (error) {

@@ -583,13 +583,15 @@ export default function Serie() {
 
                     <div className="classic-controls-wrapper">
                         <div className="classic-controls">
-                            <button 
-                                className="btn-classic" 
-                                onClick={() => navigateTo(currentQuestionIndex - 1)} 
-                                disabled={isReviewMode ? reviewIndices.indexOf(currentQuestionIndex) === 0 : currentQuestionIndex === 0}
-                            >
-                                <ChevronRight size={24} />
-                            </button>
+                            {isReviewMode && (
+                                <button 
+                                    className="btn-classic" 
+                                    onClick={() => navigateTo(currentQuestionIndex - 1)} 
+                                    disabled={reviewIndices.indexOf(currentQuestionIndex) === 0}
+                                >
+                                    <ChevronRight size={24} />
+                                </button>
+                            )}
 
                             {!showAnswer && !isLocked && (
                                 <button className="btn-classic" onClick={handleReveal} disabled={selectedAnswer === null} style={{ background: '#3b5998', color: 'white', borderColor: '#3b5998' }}>

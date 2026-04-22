@@ -76,7 +76,7 @@ export default function Admin2() {
     const [allCategories, setAllCategories] = useState([]);
     const [editingCategory, setEditingCategory] = useState(null); // { _id, category, description, image }
     const [catMessage, setCatMessage] = useState('');
-    const [newCategory, setNewCategory] = useState({ category: '', description: '', image: '', order: 0 });
+    const [newCategory, setNewCategory] = useState({ category: '', description: '', image: '', order: 0, visible: true });
     const [addingCategory, setAddingCategory] = useState(false);
 
 
@@ -95,7 +95,12 @@ export default function Admin2() {
 
     const handleUpdateCategory = async (id) => {
         try {
-            await axios.put(`${API_BASE_URL}/categories/${id}`, editingCategory);
+            const updatedData = {
+                ...editingCategory,
+                order: parseInt(editingCategory.order) || 0,
+                visible: editingCategory.visible !== false // ensure it's a boolean
+            };
+            await axios.put(`${API_BASE_URL}/categories/${id}`, updatedData);
             setCatMessage('تم التحديث بنجاح!');
             setEditingCategory(null);
             fetchAllCategories();
@@ -112,9 +117,14 @@ export default function Admin2() {
         }
         setAddingCategory(true);
         try {
-            await axios.post(`${API_BASE_URL}/categories`, newCategory);
+            const dataToSend = {
+                ...newCategory,
+                order: parseInt(newCategory.order) || 0,
+                visible: newCategory.visible !== false
+            };
+            await axios.post(`${API_BASE_URL}/categories`, dataToSend);
             setCatMessage('تمت إضافة الفئة بنجاح!');
-            setNewCategory({ category: '', description: '', image: '', order: 0 });
+            setNewCategory({ category: '', description: '', image: '', order: 0, visible: true });
             fetchAllCategories();
             setTimeout(() => setCatMessage(''), 2000);
         } catch (err) {
@@ -624,6 +634,23 @@ export default function Admin2() {
                                     onChange={e => setNewCategory({ ...newCategory, order: e.target.value })}
                                     placeholder="الترتيب (Order)"
                                 />
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                                    <span style={{ fontSize: '0.9em' }}>الحالة:</span>
+                                    <button 
+                                        onClick={() => setNewCategory({ ...newCategory, visible: !newCategory.visible })}
+                                        style={{ 
+                                            padding: '4px 12px', 
+                                            borderRadius: '15px', 
+                                            border: 'none', 
+                                            background: newCategory.visible ? '#28a745' : '#dc3545', 
+                                            color: 'white', 
+                                            cursor: 'pointer',
+                                            fontSize: '0.8em'
+                                        }}
+                                    >
+                                        {newCategory.visible ? 'ظاهرة' : 'مخفية'}
+                                    </button>
+                                </div>
                                 <button
                                     onClick={handleAddCategory}
                                     disabled={addingCategory}
@@ -659,6 +686,23 @@ export default function Admin2() {
                                                     onChange={e => setEditingCategory({ ...editingCategory, order: e.target.value })}
                                                     placeholder="الترتيب"
                                                 />
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '5px' }}>
+                                                    <span style={{ fontSize: '0.9em' }}>الحالة:</span>
+                                                    <button 
+                                                        onClick={() => setEditingCategory({ ...editingCategory, visible: !editingCategory.visible })}
+                                                        style={{ 
+                                                            padding: '4px 12px', 
+                                                            borderRadius: '15px', 
+                                                            border: 'none', 
+                                                            background: editingCategory.visible ? '#28a745' : '#dc3545', 
+                                                            color: 'white', 
+                                                            cursor: 'pointer',
+                                                            fontSize: '0.8em'
+                                                        }}
+                                                    >
+                                                        {editingCategory.visible ? 'ظاهرة' : 'مخفية'}
+                                                    </button>
+                                                </div>
                                                 <div style={{ display: 'flex', gap: '5px' }}>
                                                     <button onClick={() => handleUpdateCategory(cat._id)} style={{ ...styles.button, backgroundColor: '#28a745', flex: 1 }}>حفظ</button>
                                                     <button onClick={() => setEditingCategory(null)} style={{ ...styles.button, backgroundColor: '#6c757d', flex: 1 }}>إلغاء</button>

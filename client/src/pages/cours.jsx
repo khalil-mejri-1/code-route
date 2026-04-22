@@ -6,7 +6,7 @@ import { API_BASE_URL } from '../config';
 import { ChevronLeft, Lock, Save, Settings, X, Trash2 } from 'lucide-react';
 import { IMGBB_API_KEY, IMGBB_UPLOAD_URL } from '../config';
 
-function CardComponent({ id, category, description, image, isLoggedIn, isSubscribed, isAdmin, onEditContent, onDelete }) {
+const CardComponent = ({ id, category, description, image, order, visible, isLoggedIn, isSubscribed, isAdmin, onEditContent, onDelete }) => {
     const navigate = useNavigate();
     
     const handleDeleteClick = (e) => {
@@ -77,13 +77,19 @@ function CardComponent({ id, category, description, image, isLoggedIn, isSubscri
                 <h3 className="card-title-premium">صنف {category}</h3>
                 <p className="card-desc-premium">{description}</p>
                 
+                {visible === false && isAdmin && (
+                    <div style={{ background: '#f43f5e', color: 'white', padding: '4px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold', display: 'inline-block', marginTop: '10px' }}>
+                        مخفية عن الطلاب 🚫
+                    </div>
+                )}
+                
                 <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     {isAdmin ? (
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                             <button 
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    onEditContent({ id, category, description, image });
+                                    onEditContent({ _id: id, category, description, image, order, visible });
                                 }}
                                 className="btn-premium-sm"
                                 style={{ padding: '8px 16px', fontSize: '12px', background: 'var(--bg-accent)', color: 'var(--primary)', border: '1px solid var(--primary-glow)' }}
@@ -129,7 +135,7 @@ export default function Cours() {
 
     const isLoggedIn = localStorage.getItem('login') === 'true';
     const isSubscribed = localStorage.getItem('subscriptions') === 'true';
-    const isAdmin = localStorage.getItem('role') === 'admin' || localStorage.getItem('login') === 'true';
+    const isAdmin = localStorage.getItem('role') === 'admin';
 
     const [showModal, setShowModal] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState(null);
@@ -139,6 +145,7 @@ export default function Cours() {
     const [editCategoryName, setEditCategoryName] = useState('');
     const [editDescription, setEditDescription] = useState('');
     const [editOrder, setEditOrder] = useState(0);
+    const [editVisible, setEditVisible] = useState(true);
 
     const fetchCategories = async () => {
         try {
@@ -161,6 +168,7 @@ export default function Cours() {
         setEditCategoryName(cat.category);
         setEditDescription(cat.description);
         setEditOrder(cat.order || 0);
+        setEditVisible(cat.visible !== undefined ? cat.visible : true);
         setNewImageFile(null);
         setShowModal(true);
     };
@@ -211,11 +219,12 @@ export default function Cours() {
                 uploadedUrl = await uploadToImgBB(newImageFile);
             }
             
-            await axios.put(`${API_BASE_URL}/categories/${selectedCategory.id}`, {
+            await axios.put(`${API_BASE_URL}/categories/${selectedCategory._id}`, {
                 category: editCategoryName,
                 description: editDescription,
                 image: uploadedUrl,
-                order: parseInt(editOrder)
+                order: parseInt(editOrder),
+                visible: editVisible
             });
             setShowModal(false);
             fetchCategories();
@@ -250,6 +259,7 @@ export default function Cours() {
 
                 <div className="cards-grid">
                     {licenseCategories
+                        .filter(item => isAdmin || item.visible !== false)
                         .sort((a, b) => (a.order || 0) - (b.order || 0))
                         .map((item, index) => (
                         <CardComponent
@@ -258,6 +268,8 @@ export default function Cours() {
                             category={item.category}
                             description={item.description}
                             image={item.image}
+                            order={item.order}
+                            visible={item.visible}
                             isLoggedIn={isLoggedIn}
                             isSubscribed={isSubscribed}
                             isAdmin={isAdmin}
@@ -312,6 +324,25 @@ export default function Cours() {
                                     onChange={(e) => setEditOrder(e.target.value)}
                                     style={{ width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '10px', fontSize: '15px' }}
                                 />
+                            </div>
+
+                            <div style={{ textAlign: 'right', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px' }}>
+                                <label style={{ fontSize: '14px', fontWeight: 700, color: '#4a5568', margin: 0 }}>الحالة (إظهار الفئة):</label>
+                                <button 
+                                    onClick={() => setEditVisible(!editVisible)}
+                                    style={{ 
+                                        padding: '8px 20px', 
+                                        borderRadius: '20px', 
+                                        border: 'none', 
+                                        background: editVisible ? '#10b981' : '#f43f5e', 
+                                        color: 'white', 
+                                        cursor: 'pointer',
+                                        fontWeight: 'bold',
+                                        transition: 'all 0.3s ease'
+                                    }}
+                                >
+                                    {editVisible ? 'ظاهرة ✅' : 'مخفية ❌'}
+                                </button>
                             </div>
 
                             <div style={{ textAlign: 'right', marginBottom: '25px' }}>

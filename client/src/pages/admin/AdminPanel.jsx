@@ -9,7 +9,7 @@ const AdminPanel = () => {
     const [categories, setCategories] = useState([]);
     const [topics, setTopics] = useState([]);
     const [users, setUsers] = useState([]);
-    const [newCategory, setNewCategory] = useState({ category: '', description: '', image: '', order: 0 });
+    const [newCategory, setNewCategory] = useState({ category: '', description: '', image: '', order: 0, visible: true });
     const [newTopic, setNewTopic] = useState({ name: '', category: '', image: '' });
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
@@ -97,9 +97,14 @@ const AdminPanel = () => {
         e.preventDefault();
         setLoading(true);
         try {
-            await axios.post(`${API_BASE_URL}/categories`, newCategory);
+            const dataToSend = {
+                ...newCategory,
+                order: parseInt(newCategory.order) || 0,
+                visible: newCategory.visible !== false
+            };
+            await axios.post(`${API_BASE_URL}/categories`, dataToSend);
             setMessage('تم إضافة الصنف بنجاح');
-            setNewCategory({ category: '', description: '', image: '', order: 0 });
+            setNewCategory({ category: '', description: '', image: '', order: 0, visible: true });
             fetchCategories();
         } catch (err) {
             setMessage('فشل في إضافة الصنف');
@@ -165,7 +170,18 @@ const AdminPanel = () => {
             : `${API_BASE_URL}/topics/${data._id}`;
 
         try {
-            await axios.put(url, data);
+            const dataToSend = {
+                ...data,
+                order: type === 'category' ? (parseInt(data.order) || 0) : undefined,
+                visible: type === 'category' ? (data.visible !== false) : undefined
+            };
+            // Clean up undefined if not category
+            if (type !== 'category') {
+                delete dataToSend.order;
+                delete dataToSend.visible;
+            }
+
+            await axios.put(url, dataToSend);
             setMessage('تم التحديث بنجاح');
             setEditingItem(null);
             type === 'category' ? fetchCategories() : fetchTopics();
@@ -203,12 +219,25 @@ const AdminPanel = () => {
                                             placeholder="وصف الصنف"
                                             required
                                         />
-                                        <input
-                                            type="number"
-                                            value={editingItem.data.order}
-                                            onChange={(e) => setEditingItem({ ...editingItem, data: { ...editingItem.data, order: e.target.value } })}
                                             placeholder="الترتيب"
                                         />
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
+                                            <span>الحالة:</span>
+                                            <button 
+                                                type="button"
+                                                onClick={() => setEditingItem({ ...editingItem, data: { ...editingItem.data, visible: !editingItem.data.visible } })}
+                                                style={{ 
+                                                    padding: '5px 15px', 
+                                                    borderRadius: '15px', 
+                                                    border: 'none', 
+                                                    background: editingItem.data.visible !== false ? '#10b981' : '#f43f5e', 
+                                                    color: 'white', 
+                                                    cursor: 'pointer'
+                                                }}
+                                            >
+                                                {editingItem.data.visible !== false ? 'ظاهرة' : 'مخفية'}
+                                            </button>
+                                        </div>
                                     </>
                                 ) : (
                                     <>
@@ -311,6 +340,23 @@ const AdminPanel = () => {
                                 value={newCategory.order}
                                 onChange={(e) => setNewCategory({ ...newCategory, order: e.target.value })}
                             />
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
+                                <span style={{ color: 'white' }}>الحالة:</span>
+                                <button 
+                                    type="button"
+                                    onClick={() => setNewCategory({ ...newCategory, visible: !newCategory.visible })}
+                                    style={{ 
+                                        padding: '5px 15px', 
+                                        borderRadius: '15px', 
+                                        border: 'none', 
+                                        background: newCategory.visible ? '#10b981' : '#f43f5e', 
+                                        color: 'white', 
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    {newCategory.visible ? 'ظاهرة' : 'مخفية'}
+                                </button>
+                            </div>
                             <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
                                 <input
                                     type="text"
