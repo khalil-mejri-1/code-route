@@ -20,6 +20,10 @@ const categorySchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    visible: {
+        type: Boolean,
+        default: true
+    },
     createdAt: {
         type: Date,
         default: Date.now
