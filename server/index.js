@@ -78,6 +78,7 @@ app.post('/api/auth/signup', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
     try {
         const { email, password } = req.body;
+        const deviceId = req.body.deviceId || null;
 
         // البحث عن المستخدم
         const user = await User.findOne({ email });
@@ -85,24 +86,185 @@ app.post('/api/auth/login', async (req, res) => {
             return res.status(400).json({ message: 'البريد الإلكتروني أو كلمة المرور غير صحيحة.' });
         }
 
-        // التحقق من كلمة المرور (مقارنة مباشرة للنص، يجب استخدام التشفير في التطبيقات الحقيقية)
+        // التحقق من كلمة المرور
         if (user.password !== password) {
             return res.status(400).json({ message: 'البريد الإلكتروني أو كلمة المرور غير صحيحة.' });
         }
 
         // نجاح تسجيل الدخول
+        // 1. التحقق من حالة تجميد الحساب
+        if (user.isFrozen) {
+            return res.status(403).json({ message: 'تم تجميد حسابك بسبب محاولة الدخول من عدة أجهزة. يرجى التواصل مع الإدارة.' });
+        }
+
+        // 2. التحقق من الدخول من جهاز مختلف
+        console.log(`Login Attempt: User=${user.email}, DB_Device=${user.deviceId}, Req_Device=${deviceId}`);
+        
+        if (user.deviceId && user.deviceId !== deviceId && user.role !== 'admin') {
+            console.log(`FREEZING USER: ${user.email} due to device mismatch.`);
+            user.isFrozen = true;
+            user.deviceId = null; // إزالة بصمة الجهاز للأمان
+            await user.save();
+            return res.status(403).json({ 
+                message: 'تم كشف محاولة دخول من جهاز مختلف. تم تجميد حسابك وتسجيل الخروج من جميع الأجهزة للأمان. يرجى مراجعة الإدارة.' 
+            });
+        }
+
+        // 3. تحديث بصمة الجهاز إذا كان الحساب جديداً أو غير مرتبط بجهاز
+        if (!user.deviceId && user.role !== 'admin') {
+            console.log(`Setting initial deviceId for user: ${user.email}`);
+            user.deviceId = deviceId;
+            await user.save();
+        }
+
         res.status(200).json({
             message: 'تم تسجيل الدخول بنجاح!',
             user: {
                 id: user._id,
                 fullName: user.fullName,
-                email: user.email
+                email: user.email,
+                isApproved: user.isApproved,
+                role: user.role,
+                isFrozen: user.isFrozen,
+                subscriptions: user.isApproved || user.subscriptions || false
             }
         });
 
     } catch (error) {
         console.error('Login Error:', error);
         res.status(500).json({ message: 'حدث خطأ أثناء تسجيل الدخول', error: error.message });
+    }
+});
+
+// 2.5 تحديث حالة الموافقة للمستخدم
+app.put('/api/users/:id/approve', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { isApproved } = req.body;
+        
+        const user = await User.findByIdAndUpdate(id, { 
+            isApproved, 
+            subscriptions: isApproved // جعل العضوية VIP تلقائياً عند قبول الحساب
+        }, { new: true });
+        if (!user) {
+            return res.status(404).json({ message: 'المستخدم غير موجود' });
+        }
+        
+        res.status(200).json({ 
+            message: isApproved ? 'تمت الموافقة على المستخدم بنجاح' : 'تم إلغاء الموافقة',
+            user: { id: user._id, isApproved: user.isApproved }
+        });
+    } catch (error) {
+        res.status(500).json({ message: 'فشل في تحديث حالة المستخدم', error: error.message });
+    }
+});
+
+// 2.6 جلب حالة مستخدم معين بالبريد الإلكتروني
+app.get('/api/users/status', async (req, res) => {
+    try {
+        const { email } = req.query;
+        if (!email) return res.status(400).json({ message: 'البريد الإلكتروني مطلوب' });
+        
+        const user = await User.findOne({ email }, 'isApproved isFrozen role subscriptions');
+        if (!user) return res.status(404).json({ message: 'المستخدم غير موجود' });
+        
+        res.status(200).json({ 
+            isApproved: user.isApproved,
+            isFrozen: user.isFrozen,
+            role: user.role,
+            subscriptions: user.isApproved || user.subscriptions || false
+        });
+    } catch (error) {
+        res.status(500).json({ message: 'خطأ في جلب الحالة', error: error.message });
+    }
+});
+
+// 2.7 تجميد أو إلغاء تجميد حساب مستخدم
+app.put('/api/users/:id/freeze', async (req, res) => {
+    try {
+        const { isFrozen } = req.body;
+        const user = await User.findByIdAndUpdate(
+            req.params.id,
+            { isFrozen, deviceId: null }, // عند إلغاء التجميد نصفر الجهاز للسماح بالدخول من جهاز جديد
+            { new: true }
+        );
+        
+        if (!user) return res.status(404).json({ message: 'المستخدم غير موجود' });
+        
+        res.status(200).json({ 
+            message: isFrozen ? 'تم تجميد الحساب' : 'تم إلغاء التجميد بنجاح',
+            user: { id: user._id, isFrozen: user.isFrozen }
+        });
+    } catch (error) {
+        res.status(500).json({ message: 'فشل في تحديث حالة الحساب', error: error.message });
+    }
+});
+
+// 2.8 حفظ نتائج الامتحان للمستخدم
+app.post('/api/users/exam-results', async (req, res) => {
+    try {
+        const { email, category, examNum, correctAnswers, wrongAnswers, totalQuestions } = req.body;
+        if (!email) return res.status(400).json({ message: 'البريد الإلكتروني مطلوب' });
+
+        const user = await User.findOne({ email });
+        if (!user) return res.status(404).json({ message: 'المستخدم غير موجود' });
+
+        // إضافة النتيجة للمصفوفة
+        user.examResults.push({
+            category,
+            examNum,
+            correctAnswers,
+            wrongAnswers,
+            totalQuestions,
+            completedAt: new Date()
+        });
+
+        await user.save();
+        res.status(200).json({ message: 'تم حفظ النتيجة بنجاح' });
+    } catch (error) {
+        res.status(500).json({ message: 'فشل في حفظ النتيجة', error: error.message });
+    }
+});
+
+// 2.9 جلب بيانات الملف الشخصي (البروفايل)
+app.get('/api/users/profile', async (req, res) => {
+    try {
+        const { email } = req.query;
+        if (!email) return res.status(400).json({ message: 'البريد الإلكتروني مطلوب' });
+
+        const user = await User.findOne({ email }, 'fullName email role isApproved isFrozen subscriptions examResults createdAt');
+        if (!user) return res.status(404).json({ message: 'المستخدم غير موجود' });
+
+        const userData = user.toObject();
+        userData.subscriptions = user.isApproved || user.subscriptions || false;
+        res.status(200).json(userData);
+    } catch (error) {
+        res.status(500).json({ message: 'فشل في جلب بيانات الملف الشخصي', error: error.message });
+    }
+});
+
+// 2.10 تحديث دور المستخدم (admin/user)
+app.put('/api/users/:id/role', async (req, res) => {
+    try {
+        const { role } = req.body;
+        if (!['admin', 'user'].includes(role)) {
+            return res.status(400).json({ message: 'دور غير صالح' });
+        }
+
+        const user = await User.findByIdAndUpdate(
+            req.params.id,
+            { role },
+            { new: true }
+        );
+
+        if (!user) return res.status(404).json({ message: 'المستخدم غير موجود' });
+
+        res.status(200).json({
+            message: `تم تغيير الدور إلى ${role === 'admin' ? 'مدير' : 'مستخدم'} بنجاح`,
+            user: { id: user._id, role: user.role }
+        });
+    } catch (error) {
+        res.status(500).json({ message: 'فشل في تحديث الدور', error: error.message });
     }
 });
 
@@ -709,12 +871,25 @@ app.get('/api/users', async (req, res) => {
     }
 });
 
+// 2. حذف مستخدم
+app.delete('/api/users/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const deletedUser = await User.findByIdAndDelete(id);
+        if (!deletedUser) {
+            return res.status(404).json({ message: 'المستخدم غير موجود' });
+        }
+        res.status(200).json({ message: 'تم حذف المستخدم بنجاح' });
+    } catch (error) {
+        res.status(500).json({ message: 'فشل في حذف المستخدم', error: error.message });
+    }
+});
+
 // 2. جلب جميع الفئات
 app.get('/api/categories', async (req, res) => {
     try {
         let categories = await Category.find({});
 
-        // إذا كانت القائمة فارغة، يمكننا إضافة الفئات الافتراضية
         if (categories.length === 0) {
             const defaultCategories = [
                 { category: "B", description: "دروس في B", image: "https://www.codedelaroute.tn/images/b.png", order: 1, visible: true },
@@ -731,7 +906,13 @@ app.get('/api/categories', async (req, res) => {
             categories = await Category.insertMany(defaultCategories);
         }
 
-        res.status(200).json(categories);
+        const categoriesWithCounts = await Promise.all(categories.map(async (cat) => {
+            const topicCount = await Topic.countDocuments({ category: cat.category });
+            const catObj = cat.toObject ? cat.toObject() : cat;
+            return { ...catObj, topicCount };
+        }));
+
+        res.status(200).json(categoriesWithCounts);
     } catch (error) {
         res.status(500).json({ message: 'فشل في جلب الفئات', error: error.message });
     }

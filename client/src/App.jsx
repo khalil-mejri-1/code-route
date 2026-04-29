@@ -12,14 +12,12 @@ import CoursSeries from "./pages/cours_series.jsx"; // ⭐️ New Component
 import Examen_question from "./pages/examen_question.jsx"; // Import the new modal component
 import ExamenSeries from './pages/examen_series'; // ⭐️ New Component
 import ExamsList from './pages/exams_list'; // ⭐️ New Component
+import Profile from './pages/Profile'; // ⭐️ New Component
 import Contact from "./pages/contact.jsx"; // Import the new modal component
 import Subscriptions from "./pages/subscriptions.jsx"; // Import the new modal component
 import Serie from "./pages/serie.jsx"; // Import the new modal component
 import Examen_test from "./pages/examen_test.jsx"; // Import the new modal component
-import Home_admin from "./pages/admin/home_admin.jsx"; // Import the new modal component
-import Admin2 from "./pages/admin/Admin2.jsx"; // Import the Admin2 component
-import AdminPanel from "./pages/admin/AdminPanel.jsx"; // Import the AdminPanel component
-import MoveSeries from "./pages/admin/MoveSeries.jsx"; // ⭐️ New Component
+import AdminDashboard from "./pages/admin/AdminDashboard.jsx"; // ⭐️ Unified Admin Dashboard
 import GlobalBackButton from "./comp/GlobalBackButton"; // ⭐️ New Component
 import FullExam from "./pages/full_exam.jsx"; // ⭐️ Comprehensive Exam Page
 import FormationView from "./pages/FormationView.jsx"; // ⭐️ Training Images Page
@@ -62,6 +60,7 @@ const App = () => {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/SignUp" element={<SignUp />} />
+          <Route path="/profile" element={<Profile />} />
           <Route path="/courses" element={<Courses />} />
           <Route path="/examens" element={<Examen />} />
           <Route path="/cours/question" element={<Cours_question />} />
@@ -75,10 +74,7 @@ const App = () => {
           <Route path="/subscriptions" element={<Subscriptions />} />
           <Route path="/serie" element={<Serie />} />
           <Route path="/Examen" element={<Examen_test />} />
-          <Route path="/admin" element={<Home_admin />} />
-          <Route path="/admin2" element={<Admin2 />} />
-          <Route path="/admin-panel" element={<AdminPanel />} />
-          <Route path="/admin/move-series" element={<MoveSeries />} />
+          <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/full-exam" element={<FullExam />} />
           <Route path="/examen/question" element={<Examen_question />} />
           <Route path="/formation" element={<FormationView />} /> {/* ⭐️ New Route */}

@@ -6,7 +6,7 @@ import { API_BASE_URL } from '../config';
 import { Trophy, Lock, ChevronLeft, Settings, X, Save, Upload } from 'lucide-react';
 import { IMGBB_API_KEY, IMGBB_UPLOAD_URL } from '../config';
 
-function CardComponent({ id, category, description, image, isLoggedIn, isSubscribed, isAdmin, onEditContent }) {
+function CardComponent({ id, category, description, image, isLoggedIn, isSubscribed, isAdmin, isApproved, onEditContent }) {
     const navigate = useNavigate();
     let isCardDisabled;
     let overlayMessage;
@@ -14,7 +14,10 @@ function CardComponent({ id, category, description, image, isLoggedIn, isSubscri
     if (!isLoggedIn) {
         isCardDisabled = true;
         overlayMessage = "سجّل الدخول للمتابعة";
-    } else if (!isSubscribed && category !== "B") {
+    } else if (!isApproved && !isAdmin) {
+        isCardDisabled = true;
+        overlayMessage = "في انتظار موافقة الإدارة...";
+    } else if (!isSubscribed && category !== "B" && !isAdmin) {
         isCardDisabled = true;
         overlayMessage = "هذا الاختبار متاح للمشتركين فقط";
     } else {
@@ -81,8 +84,8 @@ function CardComponent({ id, category, description, image, isLoggedIn, isSubscri
                     ) : (
                         <div></div>
                     )}
-                    <div style={{ padding: '8px', border: '1px solid var(--glass-border)', borderRadius: '50%' }}>
-                        <ChevronLeft size={20} color="var(--primary)" />
+                    <div className="card-nav-btn">
+                        <ChevronLeft size={24} />
                     </div>
                 </div>
             </div>
@@ -93,17 +96,36 @@ function CardComponent({ id, category, description, image, isLoggedIn, isSubscri
 export default function Examen() {
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [isApproved, setIsApproved] = useState(localStorage.getItem('isApproved') === 'true');
+
     const isLoggedIn = localStorage.getItem('login') === 'true';
     const isSubscribed = localStorage.getItem('subscriptions') === 'true';
-    const isAdmin = localStorage.getItem('role') === 'admin' || localStorage.getItem('login') === 'true';
+    const isAdmin = localStorage.getItem('role') === 'admin';
 
-    const [showModal, setShowModal] = useState(false);
-    const [selectedCategory, setSelectedCategory] = useState(null);
-    const [uploading, setUploading] = useState(false);
-    const [previewUrl, setPreviewUrl] = useState('');
-    const [newImageFile, setNewImageFile] = useState(null);
-    const [editCategoryName, setEditCategoryName] = useState('');
-    const [editDescription, setEditDescription] = useState('');
+    const fetchUserStatus = async () => {
+        const email = localStorage.getItem('userEmail');
+        if (isLoggedIn && email) {
+            try {
+                const response = await axios.get(`${API_BASE_URL}/users/status?email=${email}`);
+                const { isApproved: approvedStatus, isFrozen, role } = response.data;
+
+                if (isFrozen) {
+                    localStorage.removeItem('login');
+                    localStorage.removeItem('userEmail');
+                    localStorage.removeItem('userFullName');
+                    localStorage.removeItem('role');
+                    window.location.href = '/login';
+                    return;
+                }
+
+                setIsApproved(approvedStatus);
+                localStorage.setItem('isApproved', approvedStatus.toString());
+                if (role) localStorage.setItem('role', role);
+            } catch (error) {
+                console.error('Error fetching user status:', error);
+            }
+        }
+    };
 
     const fetchCategories = async () => {
         try {
@@ -118,6 +140,7 @@ export default function Examen() {
 
     useEffect(() => {
         fetchCategories();
+        fetchUserStatus();
     }, []);
 
     const openEditModal = (cat) => {
@@ -211,6 +234,7 @@ export default function Examen() {
                             isLoggedIn={isLoggedIn}
                             isSubscribed={isSubscribed}
                             isAdmin={isAdmin}
+                            isApproved={isApproved}
                             onEditContent={openEditModal}
                         />
                     ))}

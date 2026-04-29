@@ -53,7 +53,7 @@ function TopicCard({ id, idDoc, category, image, isLoggedIn, isSubscribed, mainC
                 <p className="card-desc-premium">استكشف قواعد {category} ضمن صنف {mainCategory} بأسلوب تعليمي متطور.</p>
                 <div style={{ marginTop: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     {isAdmin ? (
-                        <button 
+                        <button
                             onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
@@ -145,7 +145,7 @@ export default function Cours_question() {
     const [loading, setLoading] = useState(true);
     const isLoggedIn = localStorage.getItem('login') === 'true';
     const isSubscribed = localStorage.getItem('subscriptions') === 'true';
-    const isAdmin = localStorage.getItem('role') === 'admin' || localStorage.getItem('login') === 'true';
+    const [isAdmin, setIsAdmin] = useState(localStorage.getItem('role') === 'admin');
 
     const [showModal, setShowModal] = useState(false);
     const [selectedTopic, setSelectedTopic] = useState(null);
@@ -158,6 +158,32 @@ export default function Cours_question() {
 
     const urlParams = new URLSearchParams(location.search);
     const mainCategory = urlParams.get('category') || 'B';
+
+    const fetchUserStatus = async () => {
+        const email = localStorage.getItem('userEmail');
+        if (isLoggedIn && email) {
+            try {
+                const response = await axios.get(`${API_BASE_URL}/users/status?email=${email}`);
+                const { isFrozen, role } = response.data;
+
+                if (isFrozen) {
+                    localStorage.removeItem('login');
+                    localStorage.removeItem('userEmail');
+                    localStorage.removeItem('userFullName');
+                    localStorage.removeItem('role');
+                    window.location.href = '/login';
+                    return;
+                }
+
+                if (role) {
+                    localStorage.setItem('role', role);
+                    setIsAdmin(role === 'admin');
+                }
+            } catch (error) {
+                console.error('Error fetching user status:', error);
+            }
+        }
+    };
 
     const fetchTopics = async () => {
         try {
@@ -172,6 +198,7 @@ export default function Cours_question() {
 
     useEffect(() => {
         fetchTopics();
+        fetchUserStatus();
     }, [mainCategory]);
 
     const openEditModal = (topic) => {
@@ -216,7 +243,7 @@ export default function Cours_question() {
             if (newImageFile) {
                 uploadedUrl = await uploadToImgBB(newImageFile);
             }
-            
+
             await axios.put(`${API_BASE_URL}/topics/${selectedTopic.id}`, {
                 name: editTopicName,
                 image: uploadedUrl
@@ -245,7 +272,7 @@ export default function Cours_question() {
             <Navbar />
             <div className="page-container">
                 <div className="page-header reveal-anim">
-                    <span className="badge-new">فئة {mainCategory}</span>
+                    <span className="badge-new"> {mainCategory}</span>
                     <h1 className="page-title">الدروس و <span className="accent">الاختبارات</span></h1>
                     <p className="hero-desc" style={{ maxWidth: '600px', margin: '0 auto' }}>
                         اختر موضوعاً للتعلم التفاعلي، أو انطلق مباشرة في الاختبار الشامل لتقييم مستواك الكلي.
@@ -279,13 +306,13 @@ export default function Cours_question() {
                 {showModal && (
                     <div className="overlay-premium" style={{ opacity: 1, zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.8)' }}>
                         <div className="reveal-anim" style={{ background: 'white', width: '95%', maxWidth: '500px', borderRadius: '24px', padding: '35px', position: 'relative', textAlign: 'center', maxHeight: '90vh', overflowY: 'auto' }}>
-                            <button 
+                            <button
                                 onClick={() => setShowModal(false)}
                                 style={{ position: 'absolute', top: '20px', left: '20px', background: 'none', border: 'none', color: '#999', cursor: 'pointer' }}
                             >
                                 <X size={24} />
                             </button>
-                            
+
                             <div style={{ marginBottom: '25px' }}>
                                 <div style={{ width: '60px', height: '60px', background: 'var(--secondary-glow)', borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--secondary)', margin: '0 auto 15px' }}>
                                     <Settings size={30} />
@@ -295,8 +322,8 @@ export default function Cours_question() {
 
                             <div style={{ textAlign: 'right', marginBottom: '20px' }}>
                                 <label style={{ display: 'block', fontSize: '14px', fontWeight: 700, marginBottom: '8px', color: '#4a5568' }}>اسم الموضوع:</label>
-                                <input 
-                                    type="text" 
+                                <input
+                                    type="text"
                                     value={editTopicName}
                                     onChange={(e) => setEditTopicName(e.target.value)}
                                     style={{ width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '10px', fontSize: '15px' }}
@@ -318,22 +345,22 @@ export default function Cours_question() {
                                 </div>
                             </div>
 
-                            <button 
+                            <button
                                 onClick={handleSaveTopic}
                                 disabled={uploading}
-                                style={{ 
-                                    width: '100%', 
-                                    padding: '16px', 
-                                    borderRadius: '16px', 
-                                    background: uploading ? '#cbd5e0' : 'var(--secondary)', 
-                                    color: 'white', 
-                                    border: 'none', 
-                                    fontWeight: 800, 
-                                    fontSize: '16px', 
+                                style={{
+                                    width: '100%',
+                                    padding: '16px',
+                                    borderRadius: '16px',
+                                    background: uploading ? '#cbd5e0' : 'var(--secondary)',
+                                    color: 'white',
+                                    border: 'none',
+                                    fontWeight: 800,
+                                    fontSize: '16px',
                                     cursor: uploading ? 'not-allowed' : 'pointer',
-                                    display: 'flex', 
-                                    alignItems: 'center', 
-                                    justifyContent: 'center', 
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
                                     gap: '10px',
                                     transition: 'all 0.3s ease'
                                 }}

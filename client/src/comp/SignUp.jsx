@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom'; // 1. Importer useNavigate
 import axios from 'axios'; // ⭐️ Import Axios
-import { User, Mail, Lock } from 'lucide-react';
+import { User, Mail, Lock, Info, CheckCircle, X } from 'lucide-react';
 import { API_BASE_URL } from '../config';
 import Navbar from './navbar';
-
-
+import ConfirmModal from './ConfirmModal'; // Reusing ConfirmModal styles for simplicity or creating a new one
 
 const SignUp = ({ onToggleMode }) => {
     // 2. Initialiser la navigation
@@ -15,6 +14,8 @@ const SignUp = ({ onToggleMode }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [acceptedTerms, setAcceptedTerms] = useState(false);
+    const [showTermsModal, setShowTermsModal] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -36,6 +37,11 @@ const SignUp = ({ onToggleMode }) => {
         }
         if (password !== confirmPassword) {
             setError('كلمتا المرور غير متطابقتين');
+            setLoading(false);
+            return;
+        }
+        if (!acceptedTerms) {
+            setError('يجب الموافقة على شروط الاستخدام للمتابعة');
             setLoading(false);
             return;
         }
@@ -150,6 +156,26 @@ const SignUp = ({ onToggleMode }) => {
                             </div>
                         </div>
 
+                        <div className="form-group terms-group">
+                            <label className="checkbox-container">
+                                <input
+                                    type="checkbox"
+                                    checked={acceptedTerms}
+                                    onChange={(e) => setAcceptedTerms(e.target.checked)}
+                                />
+                                <span className="checkmark"></span>
+                                <span className="checkbox-label">أوافق على شروط الاستخدام</span>
+                            </label>
+                            <button 
+                                type="button" 
+                                className="terms-link-btn"
+                                onClick={() => setShowTermsModal(true)}
+                            >
+                                <Info size={14} />
+                                عرض الشروط
+                            </button>
+                        </div>
+
                         <button
                             type="submit"
                             className="auth-button"
@@ -158,6 +184,35 @@ const SignUp = ({ onToggleMode }) => {
                             {loading ? 'جاري إنشاء الحساب...' : 'إنشاء الحساب'}
                         </button>
                     </form>
+
+                    {/* Terms of Use Modal */}
+                    {showTermsModal && (
+                        <div className="modal-overlay">
+                            <div className="modal-content terms-modal reveal-anim">
+                                <div className="modal-header">
+                                    <h2 className="modal-title">شروط الاستخدام</h2>
+                                    <button className="close-btn" onClick={() => setShowTermsModal(false)}><X size={18} /></button>
+                                </div>
+                                <div className="modal-body terms-text">
+                                    <h3>أهلاً بك في منصتنا التعليمية</h3>
+                                    <p>باستخدامك لهذا الموقع، فإنك توافق على الالتزام بالشروط التالية:</p>
+                                    <ul>
+                                        <li>يمنع منعاً باتاً محاولة فتح الحساب من أكثر من جهاز في نفس الوقت.</li>
+                                        <li>في حال كشف النظام لدخول متزامن من جهازين مختلفين، سيتم تجميد الحساب تلقائياً للأمان.</li>
+                                        <li>المحتوى مخصص للاستخدام الشخصي فقط ولا يجوز إعادة نشره.</li>
+                                        <li>لإلغاء تجميد الحساب، يجب التواصل مع فريق الإدارة عبر صفحة اتصل بنا.</li>
+                                    </ul>
+                                    <div className="terms-footer-note">
+                                        <CheckCircle size={18} className="text-primary" />
+                                        <span>نحن نسعى لحماية خصوصيتك وضمان أفضل تجربة تعليمية لك.</span>
+                                    </div>
+                                </div>
+                                <div className="modal-footer">
+                                    <button className="btn-premium-sm" onClick={() => setShowTermsModal(false)}>فهمت ذلك</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     <div className="auth-footer">
                         <p className="auth-toggle-text">

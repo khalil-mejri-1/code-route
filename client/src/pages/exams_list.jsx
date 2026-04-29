@@ -34,7 +34,43 @@ export default function ExamsList() {
 
     const isLoggedIn = localStorage.getItem('login') === 'true';
     const isSubscribed = localStorage.getItem('subscriptions') === 'true';
-    const isAdmin = localStorage.getItem('role') === 'admin' || localStorage.getItem('login') === 'true'; // Assuming login implies some level of control or check
+    const [isAdmin, setIsAdmin] = useState(localStorage.getItem('role') === 'admin');
+
+    const fetchUserStatus = async () => {
+        const email = localStorage.getItem('userEmail');
+        if (isLoggedIn && email) {
+            try {
+                const response = await axios.get(`${API_BASE_URL}/users/status?email=${email}`);
+                const { isFrozen, role, subscriptions } = response.data;
+                
+                if (isFrozen) {
+                    localStorage.removeItem('login');
+                    localStorage.removeItem('userEmail');
+                    localStorage.removeItem('userFullName');
+                    localStorage.removeItem('role');
+                    localStorage.removeItem('subscriptions');
+                    window.location.href = '/login';
+                    return;
+                }
+
+                if (role) {
+                    localStorage.setItem('role', role);
+                    setIsAdmin(role === 'admin');
+                }
+
+                if (subscriptions !== undefined) {
+                    localStorage.setItem('subscriptions', subscriptions.toString());
+                    window.dispatchEvent(new Event('storage')); // تنبيه باقي المكونات (مثل النبار) لتحديث الحالة
+                }
+            } catch (error) {
+                console.error('Error fetching user status:', error);
+            }
+        }
+    };
+
+    useEffect(() => {
+        fetchUserStatus();
+    }, []);
 
     const [showConfigModal, setShowConfigModal] = useState(false);
     const [allCategories, setAllCategories] = useState([]);
@@ -161,36 +197,35 @@ export default function ExamsList() {
         }
     };
 
+    const [userResults, setUserResults] = useState([]);
+
     useEffect(() => {
-        const cacheKey = `${category1}_${category2}`;
-        
-        if (cachedExamMappings[cacheKey]) {
-            setExamMappings(cachedExamMappings[cacheKey]);
-            return;
-        }
+        const fetchUserProfile = async () => {
+            const email = localStorage.getItem('userEmail');
+            if (isLoggedIn && email) {
+                try {
+                    const response = await axios.get(`${API_BASE_URL}/users/profile?email=${email}`);
+                    setUserResults(response.data.examResults || []);
+                } catch (error) {
+                    console.error("Error fetching user results:", error);
+                }
+            }
+        };
+        fetchUserProfile();
+    }, [isLoggedIn]);
 
+    useEffect(() => {
         // Determine number of exams based on category
-        const numberOfExams = category1 === 'A' ? 15 : category1 === 'B' ? 28 : 24;
+        const isCatA = category1.includes('A');
+        const isCatB = category1.includes('B');
+        const numberOfExams = isCatA ? 15 : isCatB ? 28 : 24;
 
-        // Generate unique random series numbers between 1 and 28
-        const availableSeries = Array.from({ length: 28 }, (_, i) => i + 1);
-        
-        // Shuffle the available series
-        for (let i = availableSeries.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [availableSeries[i], availableSeries[j]] = [availableSeries[j], availableSeries[i]];
-        }
-        
-        // Pick the needed number of exams
-        const selectedSeries = availableSeries.slice(0, numberOfExams);
-        
-        // Create mappings: examIndex -> mappedSerieNum
-        const mappings = selectedSeries.map((mappedSerieNum, index) => ({
-            examNum: index + 1,
-            mappedSerieNum: mappedSerieNum
+        // Create mappings: examIndex -> mappedSerieNum (Ordered 1 to N)
+        const mappings = Array.from({ length: numberOfExams }, (_, i) => ({
+            examNum: i + 1,
+            mappedSerieNum: i + 1
         }));
-        
-        cachedExamMappings[cacheKey] = mappings;
+
         setExamMappings(mappings);
     }, [category1, category2]);
 
@@ -208,7 +243,7 @@ export default function ExamsList() {
             <div className="page-container">
                 <header className="page-header reveal-anim" style={{ position: 'relative' }}>
                     <div style={{ position: 'absolute', top: '10px', right: '10px' }}>
-                        <button 
+                        <button
                             onClick={() => setShowConfigModal(true)}
                             style={{ background: 'var(--primary)', color: 'white', border: 'none', borderRadius: '50%', width: '45px', height: '45px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}
                             title="تكوين بنية الامتحان"
@@ -218,19 +253,19 @@ export default function ExamsList() {
                     </div>
                     <span className="badge-new">الاختبارات الشاملة للفئة {category1}</span>
                     <h1 className="page-title">اختر <span className="accent">الامتحان</span></h1>
-                    <p className="hero-desc">امتحانات محاكية للواقع: 5 أسئلة من تخصص {category1} مدمجة مع 25 سؤال من سلسلة عشوائية.</p>
+                    {/* <p className="hero-desc">امتحانات محاكية للواقع: 5 أسئلة من تخصص {category1} مدمجة مع 25 سؤال من سلسلة عشوائية.</p> */}
                 </header>
 
                 {showConfigModal && (
                     <div className="overlay-premium" style={{ opacity: 1, zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)' }}>
                         <div className="reveal-anim" style={{ background: 'white', width: '95%', maxWidth: '600px', borderRadius: '20px', padding: '30px', position: 'relative', color: '#333', boxShadow: '0 20px 50px rgba(0,0,0,0.3)' }}>
-                            <button 
+                            <button
                                 onClick={() => setShowConfigModal(false)}
                                 style={{ position: 'absolute', top: '20px', left: '20px', background: 'none', border: 'none', color: '#999', cursor: 'pointer' }}
                             >
                                 <X size={24} />
                             </button>
-                            
+
                             <div style={{ textAlign: 'center', marginBottom: '25px' }}>
                                 <div style={{ width: '60px', height: '60px', background: 'var(--primary-glow)', borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', margin: '0 auto 15px' }}>
                                     <Settings size={30} />
@@ -245,8 +280,8 @@ export default function ExamsList() {
                                         <div style={{ display: 'flex', gap: '15px', alignItems: 'flex-end', marginBottom: '15px' }}>
                                             <div style={{ flex: 2 }}>
                                                 <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: '#a0aec0', marginBottom: '8px', textTransform: 'uppercase' }}>الفئة المصدر</label>
-                                                <select 
-                                                    value={rule.categorySource} 
+                                                <select
+                                                    value={rule.categorySource}
                                                     onChange={(e) => updateRule(idx, 'categorySource', e.target.value)}
                                                     style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '14px', fontWeight: 600, background: 'white' }}
                                                 >
@@ -259,14 +294,14 @@ export default function ExamsList() {
                                             </div>
                                             <div style={{ flex: 1 }}>
                                                 <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: '#a0aec0', marginBottom: '8px', textTransform: 'uppercase' }}>العدد</label>
-                                                <input 
-                                                    type="number" 
-                                                    value={rule.count} 
+                                                <input
+                                                    type="number"
+                                                    value={rule.count}
                                                     onChange={(e) => updateRule(idx, 'count', e.target.value)}
                                                     style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '14px', fontWeight: 700, textAlign: 'center' }}
                                                 />
                                             </div>
-                                            <button 
+                                            <button
                                                 onClick={() => removeRule(idx)}
                                                 style={{ background: '#fff1f2', color: '#f43f5e', border: 'none', borderRadius: '10px', width: '45px', height: '45px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                                             >
@@ -275,9 +310,9 @@ export default function ExamsList() {
                                         </div>
 
                                         <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
-                                            <button 
+                                            <button
                                                 onClick={() => updateRule(idx, 'selectionMode', 'all')}
-                                                style={{ 
+                                                style={{
                                                     flex: 1, padding: '10px', borderRadius: '8px', fontSize: '13px', fontWeight: 700, cursor: 'pointer',
                                                     background: rule.selectionMode === 'all' ? 'var(--primary)' : 'white',
                                                     color: rule.selectionMode === 'all' ? 'white' : '#718096',
@@ -286,9 +321,9 @@ export default function ExamsList() {
                                             >
                                                 جميع السلاسل
                                             </button>
-                                            <button 
+                                            <button
                                                 onClick={() => updateRule(idx, 'selectionMode', 'specific')}
-                                                style={{ 
+                                                style={{
                                                     flex: 1, padding: '10px', borderRadius: '8px', fontSize: '13px', fontWeight: 700, cursor: 'pointer',
                                                     background: rule.selectionMode === 'specific' ? 'var(--primary)' : 'white',
                                                     color: rule.selectionMode === 'specific' ? 'white' : '#718096',
@@ -305,8 +340,8 @@ export default function ExamsList() {
                                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(45px, 1fr))', gap: '8px' }}>
                                                     {availableSeriesByRule[idx] ? (
                                                         availableSeriesByRule[idx].map(s => (
-                                                            <div 
-                                                                key={s} 
+                                                            <div
+                                                                key={s}
                                                                 onClick={() => updateRule(idx, 'series', s)}
                                                                 style={{
                                                                     padding: '8px 4px', borderRadius: '6px', textAlign: 'center', fontSize: '12px', fontWeight: 800, cursor: 'pointer',
@@ -333,7 +368,7 @@ export default function ExamsList() {
                                 ))}
                             </div>
 
-                            <button 
+                            <button
                                 onClick={addRule}
                                 style={{ width: '100%', padding: '12px', marginTop: '10px', border: '2px dashed #cbd5e0', borderRadius: '12px', background: 'none', color: '#718096', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer' }}
                             >
@@ -341,7 +376,7 @@ export default function ExamsList() {
                             </button>
 
                             <div style={{ marginTop: '30px', display: 'flex', gap: '15px' }}>
-                                <button 
+                                <button
                                     onClick={handleSaveConfig}
                                     disabled={isSaving}
                                     style={{ flex: 1, padding: '15px', borderRadius: '12px', background: 'var(--primary)', color: 'white', border: 'none', fontWeight: 700, fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
@@ -349,7 +384,7 @@ export default function ExamsList() {
                                     <Save size={20} /> {isSaving ? 'جاري الحفظ...' : 'حفظ التغييرات'}
                                 </button>
                             </div>
-                            
+
                             <div style={{ textAlign: 'center', marginTop: '15px', color: '#a0aec0', fontSize: '13px' }}>
                                 مجموع الأسئلة: {rules.reduce((acc, r) => acc + (r.count || 0), 0)}
                             </div>
@@ -361,7 +396,7 @@ export default function ExamsList() {
                     {examMappings.map((mapping) => {
                         // First exam is free if logged in, remaining are locked if not subscribed. Or all 24 are exams.
                         const isLocked = !isSubscribed && mapping.examNum > 1;
-                        
+
                         return (
                             <Link
                                 key={mapping.examNum}
@@ -376,57 +411,69 @@ export default function ExamsList() {
                             >
                                 {isLocked && (
                                     <div className="overlay-premium">
-                                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
                                             <Lock size={32} color="var(--primary)" />
                                             <p style={{ fontSize: '14px' }}>محتوى VIP</p>
                                         </div>
                                     </div>
                                 )}
                                 <div className="card-body-premium" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', minHeight: '220px', justifyContent: 'center' }}>
-                                        {/* زر التحديد (بنمط الأيقونة في الزاوية) */}
-                                        <div 
+                                    {/* زر التحديد (بنمط الأيقونة في الزاوية) */}
+                                    {isAdmin && (
+                                        <div
                                             onClick={(e) => {
                                                 e.preventDefault();
                                                 e.stopPropagation();
                                                 toggleSelect(mapping.examNum);
                                             }}
-                                            style={{ 
-                                                position: 'absolute', 
-                                                top: '18px', 
-                                                left: '18px', 
-                                                cursor: 'pointer', 
+                                            style={{
+                                                position: 'absolute',
+                                                top: '18px',
+                                                left: '18px',
+                                                cursor: 'pointer',
                                                 color: selectedExams[mapping.examNum] ? '#10b981' : 'rgba(255,255,255,0.15)',
                                                 transition: 'all 0.3s ease',
                                                 zIndex: 10
                                             }}
                                             title="تحديد"
                                         >
-                                            <CircleCheckBig 
-                                                size={24} 
+                                            <CircleCheckBig
+                                                size={24}
                                                 strokeWidth={selectedExams[mapping.examNum] ? 2.5 : 1.5}
                                             />
                                         </div>
+                                    )}
 
-                                        <div style={{ width: '60px', height: '60px', background: 'linear-gradient(135deg, var(--primary), var(--secondary))', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', marginBottom: '20px', boxShadow: '0 8px 20px -5px var(--primary-glow)', position: 'relative' }}>
-                                            <Trophy size={24} />
-                                            <button 
-                                                onClick={(e) => {
-                                                    e.preventDefault();
-                                                    e.stopPropagation();
-                                                    setShowConfigModal(true);
-                                                }}
-                                                style={{ position: 'absolute', top: '-5px', left: '-5px', background: 'white', border: '1px solid var(--primary)', borderRadius: '50%', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 5 }}
-                                            >
-                                                <Settings size={12} color="var(--primary)" />
-                                            </button>
-                                        </div>
+                                    <div style={{ width: '60px', height: '60px', background: 'linear-gradient(135deg, var(--primary), var(--secondary))', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', marginBottom: '20px', boxShadow: '0 8px 20px -5px var(--primary-glow)', position: 'relative' }}>
+                                        <Trophy size={24} />
+                                    </div>
                                     <h3 className="card-title-premium" style={{ fontSize: '28px' }}>اختبار {mapping.examNum}</h3>
-                                    <p style={{ color: 'var(--text-gray)', fontSize: '13px', marginTop: '10px' }}>
-                                        السلسلة المدمجة: {mapping.mappedSerieNum}
-                                    </p>
-                                    <p style={{ color: 'var(--text-dim)', fontSize: '12px', marginTop: '4px' }}>
-                                        (يحتوي على 30 سؤال مختلط)
-                                    </p>
+
+                                    {/* عرض آخر نتيجة تم تحقيقها */}
+                                    {(() => {
+                                        const result = [...userResults].reverse().find(r => r.category === category1 && r.examNum === mapping.examNum);
+                                        if (result) {
+                                            return (
+                                                <div style={{ display: 'flex', gap: '10px', marginTop: '10px', background: 'rgba(255,255,255,0.05)', padding: '8px 15px', borderRadius: '12px' }}>
+                                                    <div style={{ color: '#10b981', fontSize: '13px', fontWeight: 800 }}>
+                                                        ✅ {result.correctAnswers}
+                                                    </div>
+                                                    <div style={{ color: '#f43f5e', fontSize: '13px', fontWeight: 800 }}>
+                                                        ❌ {result.wrongAnswers}
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
+                                        return (
+                                            <p style={{ color: 'var(--text-gray)', fontSize: '13px', marginTop: '10px' }}>
+                                                لم يتم إجراء الاختبار بعد
+                                            </p>
+                                        );
+                                    })()}
+
+                                    {/* <p style={{ color: 'var(--text-dim)', fontSize: '11px', marginTop: '8px', opacity: 0.6 }}>
+                                        السلسلة المدمجة: {mapping.mappedSerieNum} (30 سؤال)
+                                    </p> */}
 
                                     {/* ✅ زر ابدأ الاختبار */}
                                     <div

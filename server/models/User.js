@@ -17,6 +17,38 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    deviceId: {
+        type: String,
+        default: null
+    },
+    isApproved: {
+        type: Boolean,
+        default: false
+    },
+    role: {
+        type: String,
+        default: 'user',
+        enum: ['user', 'admin']
+    },
+    isFrozen: {
+        type: Boolean,
+        default: false
+    },
+    subscriptions: {
+        type: Boolean,
+        default: false
+    },
+    examResults: [{
+        category: String,
+        examNum: Number,
+        correctAnswers: Number,
+        wrongAnswers: Number,
+        totalQuestions: Number,
+        completedAt: {
+            type: Date,
+            default: Date.now
+        }
+    }],
     createdAt: {
         type: Date,
         default: Date.now

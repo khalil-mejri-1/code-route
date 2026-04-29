@@ -4,6 +4,7 @@ import Navbar from '../comp/navbar';
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
 import { Lock, Play, CircleCheckBig, Trophy, ArrowLeft, X, Save, Settings } from 'lucide-react';
+import PremiumModal from '../comp/PremiumModal';
 
 const parseCategoryParam = (param) => {
     if (!param) return { category1: '', category2: '' };
@@ -23,7 +24,7 @@ const parseCategoryParam = (param) => {
 };
 
 // ===== كارد السلسلة =====
-function SerieCard({ serieNum, serieName, serieSubName, isLocked, categoryParam, isLoggedIn, isAdmin, onEdit }) {
+function SerieCard({ serieNum, serieName, serieSubName, isLocked, categoryParam, isLoggedIn, isAdmin, onEdit, onLockedClick }) {
     const [isChecked, setIsChecked] = useState(() => {
         const saved = localStorage.getItem(`checked_serie_${categoryParam}_${serieNum}`);
         return saved === 'true';
@@ -45,7 +46,7 @@ function SerieCard({ serieNum, serieName, serieSubName, isLocked, categoryParam,
             onClick={(e) => {
                 if (isLocked) {
                     e.preventDefault();
-                    alert("هذه السلسلة متاحة للمشتركين فقط. يرجى الاشتراك لفتح جميع السلاسل.");
+                    onLockedClick();
                 }
             }}
         >
@@ -91,24 +92,26 @@ function SerieCard({ serieNum, serieName, serieSubName, isLocked, categoryParam,
                     )}
                 </div>
 
-                <div 
-                    onClick={toggleCheck}
-                    style={{ 
-                        position: 'absolute', 
-                        top: '18px', 
-                        left: '18px', 
-                        cursor: 'pointer', 
-                        color: isChecked ? '#10b981' : 'rgba(255,255,255,0.15)',
-                        transition: 'all 0.3s ease',
-                        zIndex: 10
-                    }}
-                    title="تحديد"
-                >
-                    <CircleCheckBig 
-                        size={24} 
-                        strokeWidth={isChecked ? 2.5 : 1.5} 
-                    />
-                </div>
+                {isAdmin && (
+                    <div 
+                        onClick={toggleCheck}
+                        style={{ 
+                            position: 'absolute', 
+                            top: '18px', 
+                            left: '18px', 
+                            cursor: 'pointer', 
+                            color: isChecked ? '#10b981' : 'rgba(255,255,255,0.15)',
+                            transition: 'all 0.3s ease',
+                            zIndex: 10
+                        }}
+                        title="تحديد"
+                    >
+                        <CircleCheckBig 
+                            size={24} 
+                            strokeWidth={isChecked ? 2.5 : 1.5} 
+                        />
+                    </div>
+                )}
             </div>
         </Link>
     );
@@ -228,6 +231,9 @@ export default function CoursSeries() {
     const [serieSubName, setSerieSubName] = useState('');
     const [targetCategory, setTargetCategory] = useState('');
     const [updating, setUpdating] = useState(false);
+    const [showPremiumModal, setShowPremiumModal] = useState(false);
+
+    const [isAdmin, setIsAdmin] = useState(localStorage.getItem('role') === 'admin');
 
     const LICENSE_TYPES = ["B", "A", "AA", "Z", "D", "CE", "C", "امتحانات"];
 
@@ -237,7 +243,38 @@ export default function CoursSeries() {
 
     const isLoggedIn = localStorage.getItem('login') === 'true';
     const isSubscribed = localStorage.getItem('subscriptions') === 'true';
-    const isAdmin = localStorage.getItem('role') === 'admin' || localStorage.getItem('login') === 'true';
+
+    const fetchUserStatus = async () => {
+        const email = localStorage.getItem('userEmail');
+        if (isLoggedIn && email) {
+            try {
+                const response = await axios.get(`${API_BASE_URL}/users/status?email=${email}`);
+                const { isFrozen, role, subscriptions } = response.data;
+                
+                if (isFrozen) {
+                    localStorage.removeItem('login');
+                    localStorage.removeItem('userEmail');
+                    localStorage.removeItem('userFullName');
+                    localStorage.removeItem('role');
+                    localStorage.removeItem('subscriptions');
+                    window.location.href = '/login';
+                    return;
+                }
+
+                if (role) {
+                    localStorage.setItem('role', role);
+                    setIsAdmin(role === 'admin');
+                }
+
+                if (subscriptions !== undefined) {
+                    localStorage.setItem('subscriptions', subscriptions.toString());
+                    window.dispatchEvent(new Event('storage'));
+                }
+            } catch (error) {
+                console.error('Error fetching user status:', error);
+            }
+        }
+    };
 
     const fetchSeries = async () => {
         if (!category1) {
@@ -260,6 +297,7 @@ export default function CoursSeries() {
 
     useEffect(() => {
         fetchSeries();
+        fetchUserStatus();
     }, [category1, category2]);
 
     const openEditModal = (serie) => {
@@ -325,6 +363,7 @@ export default function CoursSeries() {
                                     isLoggedIn={isLoggedIn}
                                     isAdmin={isAdmin}
                                     onEdit={openEditModal}
+                                    onLockedClick={() => setShowPremiumModal(true)}
                                 />
                             ))}
                         </div>
@@ -438,6 +477,11 @@ export default function CoursSeries() {
                         </div>
                     </div>
                 )}
+
+                <PremiumModal 
+                    isOpen={showPremiumModal} 
+                    onClose={() => setShowPremiumModal(false)} 
+                />
             </div>
         </div>
     );

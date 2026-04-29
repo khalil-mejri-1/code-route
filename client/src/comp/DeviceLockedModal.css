@@ -1,0 +1,91 @@
+.device-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(11, 15, 26, 0.85);
+    backdrop-filter: blur(12px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    direction: rtl;
+}
+
+.device-modal-container {
+    background: #151b2d;
+    width: 90%;
+    max-width: 450px;
+    border-radius: 30px;
+    padding: 40px;
+    text-align: center;
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5);
+}
+
+.shield-icon {
+    width: 80px;
+    height: 80px;
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 25px;
+    animation: pulse-green 2s infinite;
+}
+
+@keyframes pulse-green {
+    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+    70% { box-shadow: 0 0 0 20px rgba(16, 185, 129, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+.device-modal-body h2 {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: white;
+    margin-bottom: 15px;
+}
+
+.device-modal-body p {
+    color: #94a3b8;
+    line-height: 1.7;
+    margin-bottom: 25px;
+}
+
+.device-info-box {
+    background: rgba(59, 130, 246, 0.05);
+    padding: 15px;
+    border-radius: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: #3b82f6;
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 30px;
+    border: 1px dashed rgba(59, 130, 246, 0.3);
+}
+
+.device-modal-btn {
+    width: 100%;
+    padding: 15px;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 15px;
+    font-weight: bold;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.device-modal-btn:hover {
+    background: #2563eb;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);
+}

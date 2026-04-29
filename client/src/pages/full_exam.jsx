@@ -63,6 +63,7 @@ export default function FullExam() {
     const [isReviewMode, setIsReviewMode] = useState(false);
     const [userChoices, setUserChoices] = useState([]);
     const [reviewIndices, setReviewIndices] = useState([]);
+    const [hasSavedResult, setHasSavedResult] = useState(false);
 
     const isSubscribed = localStorage.getItem('subscriptions') === 'true';
 
@@ -112,6 +113,36 @@ export default function FullExam() {
         fetchQuestions();
     }, [category1, category2, examSerieParam]);
 
+    const correctCount = userAnswersHistory.filter(h => h === true).length;
+    const totalQuestions = quizData.length;
+
+    useEffect(() => {
+        if (isExamFinished && !hasSavedResult && !isReviewMode && totalQuestions > 0) {
+            const saveResults = async () => {
+                const email = localStorage.getItem('userEmail');
+                const examNum = parseInt(examSerieParam) || 1;
+                
+                if (email) {
+                    try {
+                        await axios.post(`${API_BASE_URL}/users/exam-results`, {
+                            email,
+                            category: category1,
+                            examNum: examNum,
+                            correctAnswers: correctCount,
+                            wrongAnswers: totalQuestions - correctCount,
+                            totalQuestions: totalQuestions
+                        });
+                        setHasSavedResult(true);
+                        console.log("Exam results saved successfully");
+                    } catch (error) {
+                        console.error("Error saving exam results:", error);
+                    }
+                }
+            };
+            saveResults();
+        }
+    }, [isExamFinished, correctCount, totalQuestions, category1, hasSavedResult, isReviewMode, examSerieParam]);
+
     useEffect(() => {
         if (quizData.length > 0) {
             quizData.forEach(q => {
@@ -123,7 +154,6 @@ export default function FullExam() {
         }
     }, [quizData]);
 
-    const totalQuestions = quizData.length;
     const visibleCount = isSubscribed ? totalQuestions : Math.min(totalQuestions, FREE_TRIAL_LIMIT);
     const isLocked = !isSubscribed && currentQuestionIndex >= FREE_TRIAL_LIMIT;
     const currentQuestion = quizData[currentQuestionIndex];
@@ -321,7 +351,6 @@ export default function FullExam() {
         }
     };
 
-    const correctCount = userAnswersHistory.filter(h => h === true).length;
     const answeredCount = userAnswersHistory.filter(h => h !== null).length;
 
     if (loading) {

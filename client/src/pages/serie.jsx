@@ -65,11 +65,43 @@ export default function Serie() {
     const [reviewIndices, setReviewIndices] = useState([]);
 
     const isSubscribed = localStorage.getItem('subscriptions') === 'true';
+    const isLoggedIn = localStorage.getItem('login') === 'true';
+    const [isAdmin, setIsAdmin] = useState(localStorage.getItem('role') === 'admin');
 
     const urlParams = new URLSearchParams(location.search);
     const categoryParam = urlParams.get('category');
     const nbSerieParam = urlParams.get('nb_serie') || '1';
     const { category1, category2 } = parseCategoryParam(categoryParam || '');
+
+    const fetchUserStatus = async () => {
+        const email = localStorage.getItem('userEmail');
+        if (isLoggedIn && email) {
+            try {
+                const response = await axios.get(`${API_BASE_URL}/users/status?email=${email}`);
+                const { isFrozen, role } = response.data;
+                
+                if (isFrozen) {
+                    localStorage.removeItem('login');
+                    localStorage.removeItem('userEmail');
+                    localStorage.removeItem('userFullName');
+                    localStorage.removeItem('role');
+                    window.location.href = '/login';
+                    return;
+                }
+
+                if (role) {
+                    localStorage.setItem('role', role);
+                    setIsAdmin(role === 'admin');
+                }
+            } catch (error) {
+                console.error('Error fetching user status:', error);
+            }
+        }
+    };
+
+    useEffect(() => {
+        fetchUserStatus();
+    }, []);
 
     useEffect(() => {
         const fetchQuestions = async () => {
@@ -545,9 +577,13 @@ export default function Serie() {
                     {!isLocked && (
                         <div className="classic-question-area">
                             <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', marginBottom: '15px' }}>
-                                <div className="category-tag">{category1} {category2 ? `(${category2})` : ''}</div>
-                                <button onClick={openEditModal} className="btn-edit-classic">تعديل السؤال</button>
-                                <button onClick={() => navigate(`/formation?category=${encodeURIComponent(category1)}`)} className="btn-edit-classic" style={{ background: '#10b981', color: 'white' }}>تكوين</button>
+                                {isAdmin && (
+                                    <>
+                                        <div className="category-tag">{category1} {category2 ? `(${category2})` : ''}</div>
+                                        <button onClick={openEditModal} className="btn-edit-classic">تعديل السؤال</button>
+                                        <button onClick={() => navigate(`/formation?category=${encodeURIComponent(category1)}`)} className="btn-edit-classic" style={{ background: '#10b981', color: 'white' }}>تكوين</button>
+                                    </>
+                                )}
                             </div>
                             <h1 className="classic-question-text">{currentQuestion.question}</h1>
                             <div className="classic-options-container">

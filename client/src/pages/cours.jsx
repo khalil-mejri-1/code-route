@@ -6,7 +6,7 @@ import { API_BASE_URL } from '../config';
 import { ChevronLeft, Lock, Save, Settings, X, Trash2 } from 'lucide-react';
 import { IMGBB_API_KEY, IMGBB_UPLOAD_URL } from '../config';
 
-const CardComponent = ({ id, category, description, image, order, visible, isLoggedIn, isSubscribed, isAdmin, onEditContent, onDelete }) => {
+const CardComponent = ({ id, category, description, image, order, visible, isLoggedIn, isSubscribed, isAdmin, isApproved, topicCount, onEditContent, onDelete }) => {
     const navigate = useNavigate();
     
     const handleDeleteClick = (e) => {
@@ -22,7 +22,10 @@ const CardComponent = ({ id, category, description, image, order, visible, isLog
     if (!isLoggedIn) {
         isCardDisabled = true;
         overlayMessage = "سجّل الدخول للمتابعة";
-    } else if (!isSubscribed && category !== "B") {
+    } else if (!isApproved && !isAdmin) {
+        isCardDisabled = true;
+        overlayMessage = "في انتظار موافقة الإدارة...";
+    } else if (!isSubscribed && category !== "B" && !isAdmin) {
         isCardDisabled = true;
         overlayMessage = "هذا الصنف متاح للمشتركين فقط";
     } else {
@@ -30,20 +33,18 @@ const CardComponent = ({ id, category, description, image, order, visible, isLog
         overlayMessage = "";
     }
 
-    const handleCardClick = async () => {
+    const handleCardClick = () => {
         if (isCardDisabled) return;
 
-        try {
-            const response = await axios.get(`${API_BASE_URL}/topics?category=${encodeURIComponent(category)}`);
-            const topics = response.data;
+        // "Root Fix": Use topicCount from the API for instant navigation
+        if (!order && order !== 0) { /* placeholder for future logic if needed */ }
+        
+        // Use props directly for zero-latency switching
+        const currentTopicCount = topicCount || 0;
 
-            if (topics.length === 0) {
-                navigate(`/cours/series?category=${encodeURIComponent(category)}`);
-            } else {
-                navigate(`/Cours_question?category=${encodeURIComponent(category)}`);
-            }
-        } catch (error) {
-            console.error("Error checking topics:", error);
+        if (currentTopicCount === 0) {
+            navigate(`/cours/series?category=${encodeURIComponent(category)}`);
+        } else {
             navigate(`/Cours_question?category=${encodeURIComponent(category)}`);
         }
     };
@@ -51,10 +52,11 @@ const CardComponent = ({ id, category, description, image, order, visible, isLog
     return (
         <div 
             className={`premium-card reveal-anim ${isCardDisabled ? 'disabled' : ''}`}
-            style={{ position: 'relative' }}
+            style={{ position: 'relative', cursor: isCardDisabled ? 'default' : 'pointer' }}
+            onClick={handleCardClick}
         >
             {/* Settings button removed from here, moved to card-body-premium */}
-            <div className="card-img-wrapper" onClick={handleCardClick}>
+            <div className="card-img-wrapper">
                 <img src={image} alt={category} />
                 {isCardDisabled && (
                     <div className="overlay-premium">
@@ -120,8 +122,8 @@ const CardComponent = ({ id, category, description, image, order, visible, isLog
                     ) : (
                         <div></div>
                     )}
-                    <div style={{ padding: '8px', border: '1px solid var(--glass-border)', borderRadius: '50%' }}>
-                        <ChevronLeft size={20} color="var(--primary)" />
+                    <div className="card-nav-btn">
+                        <ChevronLeft size={24} />
                     </div>
                 </div>
             </div>
@@ -132,10 +134,37 @@ const CardComponent = ({ id, category, description, image, order, visible, isLog
 export default function Cours() {
     const [licenseCategories, setLicenseCategories] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [isApproved, setIsApproved] = useState(localStorage.getItem('isApproved') === 'true');
 
     const isLoggedIn = localStorage.getItem('login') === 'true';
     const isSubscribed = localStorage.getItem('subscriptions') === 'true';
     const isAdmin = localStorage.getItem('role') === 'admin';
+
+    const fetchUserStatus = async () => {
+        const email = localStorage.getItem('userEmail');
+        if (isLoggedIn && email) {
+            try {
+                const response = await axios.get(`${API_BASE_URL}/users/status?email=${email}`);
+                const { isApproved: approvedStatus, isFrozen, role } = response.data;
+                
+                if (isFrozen) {
+                    // الحساب مجمد، تسجيل الخروج فوراً
+                    localStorage.removeItem('login');
+                    localStorage.removeItem('userEmail');
+                    localStorage.removeItem('userFullName');
+                    localStorage.removeItem('role');
+                    window.location.href = '/login';
+                    return;
+                }
+
+                setIsApproved(approvedStatus);
+                localStorage.setItem('isApproved', approvedStatus.toString());
+                if (role) localStorage.setItem('role', role);
+            } catch (error) {
+                console.error('Error fetching user status:', error);
+            }
+        }
+    };
 
     const [showModal, setShowModal] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState(null);
@@ -160,6 +189,7 @@ export default function Cours() {
 
     useEffect(() => {
         fetchCategories();
+        fetchUserStatus();
     }, []);
 
     const openEditModal = (cat) => {
@@ -273,6 +303,8 @@ export default function Cours() {
                             isLoggedIn={isLoggedIn}
                             isSubscribed={isSubscribed}
                             isAdmin={isAdmin}
+                            isApproved={isApproved}
+                            topicCount={item.topicCount}
                             onEditContent={openEditModal}
                             onDelete={handleDeleteCategory}
                         />
