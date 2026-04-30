@@ -38,6 +38,10 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    allowedCategories: {
+        type: [String],
+        default: []
+    },
     examResults: [{
         category: String,
         examNum: Number,
