@@ -6,7 +6,7 @@ import { API_BASE_URL } from '../config';
 import { ChevronLeft, Lock, Save, Settings, X, Trash2 } from 'lucide-react';
 import { IMGBB_API_KEY, IMGBB_UPLOAD_URL } from '../config';
 
-const CardComponent = ({ id, category, description, image, order, visible, isLoggedIn, isSubscribed, isAdmin, isApproved, topicCount, onEditContent, onDelete }) => {
+const CardComponent = ({ id, category, description, image, order, visible, isFree, isLoggedIn, isSubscribed, isAdmin, isApproved, userAllowedCategories, topicCount, onEditContent, onDelete }) => {
     const navigate = useNavigate();
     
     const handleDeleteClick = (e) => {
@@ -19,13 +19,19 @@ const CardComponent = ({ id, category, description, image, order, visible, isLog
     let isCardDisabled;
     let overlayMessage;
 
-    if (!isLoggedIn) {
+    if (isAdmin || isFree) {
+        isCardDisabled = false;
+        overlayMessage = "";
+    } else if (!isLoggedIn) {
         isCardDisabled = true;
         overlayMessage = "سجّل الدخول للمتابعة";
-    } else if (!isApproved && !isAdmin) {
+    } else if (!isApproved) {
         isCardDisabled = true;
         overlayMessage = "في انتظار موافقة الإدارة...";
-    } else if (!isSubscribed && category !== "B" && !isAdmin) {
+    } else if (userAllowedCategories && userAllowedCategories.length > 0 && !userAllowedCategories.includes(category)) {
+        isCardDisabled = true;
+        overlayMessage = "غير مسموح لك بدخول هذا الصنف";
+    } else if (!isSubscribed) {
         isCardDisabled = true;
         overlayMessage = "هذا الصنف متاح للمشتركين فقط";
     } else {
@@ -73,8 +79,8 @@ const CardComponent = ({ id, category, description, image, order, visible, isLog
                 )}
             </div>
             <div className="card-body-premium">
-                <div className="badge-float" style={{ background: category === 'B' ? 'var(--secondary)' : 'var(--primary)' }}>
-                    {category === 'B' ? 'مجاني' : 'دروس VIP'}
+                <div className="badge-float" style={{ background: (category === 'B' || isFree) ? 'var(--secondary)' : 'var(--primary)' }}>
+                    {(category === 'B' || isFree) ? 'مجاني' : 'دروس VIP'}
                 </div>
                 <h3 className="card-title-premium">صنف {category}</h3>
                 <p className="card-desc-premium">{description}</p>
@@ -91,7 +97,7 @@ const CardComponent = ({ id, category, description, image, order, visible, isLog
                             <button 
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    onEditContent({ _id: id, category, description, image, order, visible });
+                                    onEditContent({ _id: id, category, description, image, order, visible, isFree });
                                 }}
                                 className="btn-premium-sm"
                                 style={{ padding: '8px 16px', fontSize: '12px', background: 'var(--bg-accent)', color: 'var(--primary)', border: '1px solid var(--primary-glow)' }}
@@ -135,6 +141,7 @@ export default function Cours() {
     const [licenseCategories, setLicenseCategories] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isApproved, setIsApproved] = useState(localStorage.getItem('isApproved') === 'true');
+    const [userAllowedCategories, setUserAllowedCategories] = useState([]);
 
     const isLoggedIn = localStorage.getItem('login') === 'true';
     const isSubscribed = localStorage.getItem('subscriptions') === 'true';
@@ -145,7 +152,7 @@ export default function Cours() {
         if (isLoggedIn && email) {
             try {
                 const response = await axios.get(`${API_BASE_URL}/users/status?email=${email}`);
-                const { isApproved: approvedStatus, isFrozen, role } = response.data;
+                const { isApproved: approvedStatus, isFrozen, role, allowedCategories } = response.data;
                 
                 if (isFrozen) {
                     // الحساب مجمد، تسجيل الخروج فوراً
@@ -158,6 +165,7 @@ export default function Cours() {
                 }
 
                 setIsApproved(approvedStatus);
+                setUserAllowedCategories(allowedCategories || []);
                 localStorage.setItem('isApproved', approvedStatus.toString());
                 if (role) localStorage.setItem('role', role);
             } catch (error) {
@@ -175,6 +183,7 @@ export default function Cours() {
     const [editDescription, setEditDescription] = useState('');
     const [editOrder, setEditOrder] = useState(0);
     const [editVisible, setEditVisible] = useState(true);
+    const [editIsFree, setEditIsFree] = useState(false);
 
     const fetchCategories = async () => {
         try {
@@ -199,6 +208,7 @@ export default function Cours() {
         setEditDescription(cat.description);
         setEditOrder(cat.order || 0);
         setEditVisible(cat.visible !== undefined ? cat.visible : true);
+        setEditIsFree(cat.isFree !== undefined ? cat.isFree : false);
         setNewImageFile(null);
         setShowModal(true);
     };
@@ -254,7 +264,8 @@ export default function Cours() {
                 description: editDescription,
                 image: uploadedUrl,
                 order: parseInt(editOrder),
-                visible: editVisible
+                visible: editVisible,
+                isFree: editIsFree
             });
             setShowModal(false);
             fetchCategories();
@@ -300,10 +311,12 @@ export default function Cours() {
                             image={item.image}
                             order={item.order}
                             visible={item.visible}
+                            isFree={item.isFree}
                             isLoggedIn={isLoggedIn}
                             isSubscribed={isSubscribed}
                             isAdmin={isAdmin}
                             isApproved={isApproved}
+                            userAllowedCategories={userAllowedCategories}
                             topicCount={item.topicCount}
                             onEditContent={openEditModal}
                             onDelete={handleDeleteCategory}
@@ -374,6 +387,25 @@ export default function Cours() {
                                     }}
                                 >
                                     {editVisible ? 'ظاهرة ✅' : 'مخفية ❌'}
+                                </button>
+                            </div>
+
+                            <div style={{ textAlign: 'right', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px' }}>
+                                <label style={{ fontSize: '14px', fontWeight: 700, color: '#4a5568', margin: 0 }}>نوع الدرس (مجاني أم مدفوع):</label>
+                                <button 
+                                    onClick={() => setEditIsFree(!editIsFree)}
+                                    style={{ 
+                                        padding: '8px 20px', 
+                                        borderRadius: '20px', 
+                                        border: 'none', 
+                                        background: editIsFree ? '#10b981' : '#f59e0b', 
+                                        color: 'white', 
+                                        cursor: 'pointer',
+                                        fontWeight: 'bold',
+                                        transition: 'all 0.3s ease'
+                                    }}
+                                >
+                                    {editIsFree ? 'مجاني 🎁' : 'مدفوع 💰'}
                                 </button>
                             </div>
 

@@ -24,6 +24,10 @@ const categorySchema = new mongoose.Schema({
         type: Boolean,
         default: true
     },
+    isFree: {
+        type: Boolean,
+        default: false
+    },
     createdAt: {
         type: Date,
         default: Date.now

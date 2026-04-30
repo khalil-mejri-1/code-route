@@ -118,7 +118,7 @@ function SerieCard({ serieNum, serieName, serieSubName, isLocked, categoryParam,
 }
 
 // ===== كارد الاختبار الشامل للموضوع =====
-function TopicExamCard({ category1, category2, isSubscribed, isLoggedIn }) {
+function TopicExamCard({ category1, category2, isSubscribed, isLoggedIn, isFree }) {
     const navigate = useNavigate();
 
     // بناء رابط الاختبار:
@@ -132,7 +132,7 @@ function TopicExamCard({ category1, category2, isSubscribed, isLoggedIn }) {
     // توجيه إلى نافذة الـ 24 اختبار
     const examLink = `/exams-list?category=${encodedCategory}`;
 
-    const isLocked = !isLoggedIn;
+    const isLocked = !isLoggedIn && !isFree;
 
     return (
         <Link
@@ -240,6 +240,20 @@ export default function CoursSeries() {
     const urlParams = new URLSearchParams(location.search);
     const categoryParam = urlParams.get('category');
     const { category1, category2 } = parseCategoryParam(categoryParam);
+    const [isFreeCategory, setIsFreeCategory] = useState(false);
+
+    const fetchCategoryInfo = async () => {
+        try {
+            const res = await axios.get(`${API_BASE_URL}/categories`);
+            const currentCat = res.data.find(c => c.category === category1);
+            if (currentCat) {
+                // If the user hasn't toggled it yet, B defaults to free for now if isFree is undefined
+                setIsFreeCategory(currentCat.isFree !== undefined ? currentCat.isFree : (category1 === 'B'));
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    };
 
     const isLoggedIn = localStorage.getItem('login') === 'true';
     const isSubscribed = localStorage.getItem('subscriptions') === 'true';
@@ -249,7 +263,7 @@ export default function CoursSeries() {
         if (isLoggedIn && email) {
             try {
                 const response = await axios.get(`${API_BASE_URL}/users/status?email=${email}`);
-                const { isFrozen, role, subscriptions } = response.data;
+                const { isFrozen, role, subscriptions, allowedCategories } = response.data;
                 
                 if (isFrozen) {
                     localStorage.removeItem('login');
@@ -259,6 +273,14 @@ export default function CoursSeries() {
                     localStorage.removeItem('subscriptions');
                     window.location.href = '/login';
                     return;
+                }
+
+                if (role !== 'admin' && allowedCategories && allowedCategories.length > 0) {
+                    if (!allowedCategories.includes(category1)) {
+                        alert("غير مسموح لك بدخول هذا الصنف");
+                        window.location.href = '/cours';
+                        return;
+                    }
                 }
 
                 if (role) {
@@ -298,6 +320,7 @@ export default function CoursSeries() {
     useEffect(() => {
         fetchSeries();
         fetchUserStatus();
+        fetchCategoryInfo();
     }, [category1, category2]);
 
     const openEditModal = (serie) => {
@@ -358,33 +381,38 @@ export default function CoursSeries() {
                                     serieNum={s.nb_serie}
                                     serieName={s.serieName}
                                     serieSubName={s.serieSubName}
-                                    isLocked={!isSubscribed && s.nb_serie > 1}
+                                    isLocked={!isSubscribed && !isFreeCategory && s.nb_serie > 1}
                                     categoryParam={categoryParam}
                                     isLoggedIn={isLoggedIn}
                                     isAdmin={isAdmin}
                                     onEdit={openEditModal}
-                                    onLockedClick={() => setShowPremiumModal(true)}
+                                    onLockedClick={() => {
+                                        if (!isLoggedIn) {
+                                            alert("سجّل الدخول للمتابعة.");
+                                        } else {
+                                            alert("هذه السلسلة متاحة للمشتركين فقط.");
+                                        }
+                                    }}
                                 />
                             ))}
                         </div>
 
                         {/* --- فاصل وكارد الاختبار --- */}
-                        {category1 !== 'B' && (
-                            <div style={{ marginTop: '60px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '28px', direction: 'rtl' }}>
-                                    <div style={{ width: '4px', height: '28px', background: 'var(--secondary)', borderRadius: '4px' }}></div>
-                                    <h2 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-white)' }}>اختبر مستواك في هذا الموضوع</h2>
-                                </div>
-                                <div className="cards-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))' }}>
-                                    <TopicExamCard
-                                        category1={category1}
-                                        category2={category2}
-                                        isSubscribed={isSubscribed}
-                                        isLoggedIn={isLoggedIn}
-                                    />
-                                </div>
+                        <div style={{ marginTop: '60px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '28px', direction: 'rtl' }}>
+                                <div style={{ width: '4px', height: '28px', background: 'var(--secondary)', borderRadius: '4px' }}></div>
+                                <h2 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-white)' }}>اختبر مستواك في هذا الموضوع</h2>
                             </div>
-                        )}
+                            <div className="cards-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))' }}>
+                                <TopicExamCard
+                                    category1={category1}
+                                    category2={category2}
+                                    isSubscribed={isSubscribed}
+                                    isLoggedIn={isLoggedIn}
+                                    isFree={isFreeCategory}
+                                />
+                            </div>
+                        </div>
                     </>
                 )}
 

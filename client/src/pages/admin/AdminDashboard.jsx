@@ -9,6 +9,7 @@ import './AdminDashboard.css';
 const AdminDashboard = () => {
     const [activeTab, setActiveTab] = useState('users');
     const [users, setUsers] = useState([]);
+    const [availableCategories, setAvailableCategories] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -16,6 +17,12 @@ const AdminDashboard = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [showResultsModal, setShowResultsModal] = useState(false);
     const [selectedUserResults, setSelectedUserResults] = useState(null);
+    
+    // Categories Modal State
+    const [showCategoriesModal, setShowCategoriesModal] = useState(false);
+    const [selectedUserForCategories, setSelectedUserForCategories] = useState(null);
+    const [selectedCategoriesList, setSelectedCategoriesList] = useState([]);
+
     const [modalConfig, setModalConfig] = useState({
         title: '',
         message: '',
@@ -34,8 +41,19 @@ const AdminDashboard = () => {
 
         if (activeTab === 'users') {
             fetchUsers();
+            fetchCategories();
         }
     }, [activeTab]);
+
+    const fetchCategories = async () => {
+        try {
+            const res = await axios.get(`${API_BASE_URL}/categories`);
+            setAvailableCategories(res.data);
+        } catch (err) {
+            console.error('فشل في جلب الفئات', err);
+        }
+    };
+
 
     const fetchUsers = async () => {
         setLoading(true);
@@ -99,6 +117,23 @@ const AdminDashboard = () => {
             }
         });
         setIsModalOpen(true);
+    };
+
+    const handleSaveUserCategories = async () => {
+        try {
+            await axios.put(`${API_BASE_URL}/users/${selectedUserForCategories._id}/categories`, {
+                allowedCategories: selectedCategoriesList
+            });
+            setUsers(users.map(user => 
+                user._id === selectedUserForCategories._id 
+                    ? { ...user, allowedCategories: selectedCategoriesList } 
+                    : user
+            ));
+            setShowCategoriesModal(false);
+        } catch (err) {
+            console.error(err);
+            alert('فشل في تحديث الدروس المسموحة');
+        }
     };
 
     const handleLogout = () => {
@@ -193,6 +228,7 @@ const AdminDashboard = () => {
                                                     <th>الرتبة</th>
                                                     <th>تاريخ الانضمام</th>
                                                     <th>الحالة</th>
+                                                    <th>الدروس المسموحة</th>
                                                     <th>التجميد</th>
                                                     <th>الإجراءات</th>
                                                 </tr>
@@ -219,6 +255,26 @@ const AdminDashboard = () => {
                                                             <span className={`status-badge ${user.isApproved ? 'active' : 'pending'}`}>
                                                                 {user.isApproved ? 'مقبول' : 'قيد الانتظار'}
                                                             </span>
+                                                        </td>
+                                                        <td>
+                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                                                <span style={{ fontSize: '12px', fontWeight: 'bold' }}>
+                                                                    {user.allowedCategories && user.allowedCategories.length > 0 
+                                                                        ? user.allowedCategories.join(', ') 
+                                                                        : 'الكل'}
+                                                                </span>
+                                                                <button
+                                                                    className="btn-premium-sm"
+                                                                    style={{ padding: '2px 8px', fontSize: '10px' }}
+                                                                    onClick={() => {
+                                                                        setSelectedUserForCategories(user);
+                                                                        setSelectedCategoriesList(user.allowedCategories || []);
+                                                                        setShowCategoriesModal(true);
+                                                                    }}
+                                                                >
+                                                                    تعديل الدروس
+                                                                </button>
+                                                            </div>
                                                         </td>
                                                         <td>
                                                             <span className={`status-badge ${user.isFrozen ? 'frozen' : 'normal'}`}>
@@ -426,6 +482,52 @@ const AdminDashboard = () => {
                                 )}
                             </div>
                             <button className="btn-premium-sm" onClick={() => setShowResultsModal(false)}>تم</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Categories Modal */}
+            {showCategoriesModal && selectedUserForCategories && (
+                <div className="premium-modal-overlay reveal-anim" style={{ zIndex: 9999 }}>
+                    <div className="results-modal-content glass-effect" style={{ maxWidth: '400px' }}>
+                        <div className="modal-header-premium">
+                            <div className="header-title-group">
+                                <div>
+                                    <h2>تعديل الدروس المسموحة</h2>
+                                    <p>{selectedUserForCategories.fullName}</p>
+                                </div>
+                            </div>
+                            <button className="close-modal-btn" onClick={() => setShowCategoriesModal(false)}>
+                                <X size={24} />
+                            </button>
+                        </div>
+                        <div className="modal-body-premium" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                {availableCategories.map(cat => (
+                                    <label key={cat._id} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '10px', background: 'rgba(255,255,255,0.5)', borderRadius: '8px' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedCategoriesList.includes(cat.category)}
+                                            onChange={(e) => {
+                                                if (e.target.checked) {
+                                                    setSelectedCategoriesList([...selectedCategoriesList, cat.category]);
+                                                } else {
+                                                    setSelectedCategoriesList(selectedCategoriesList.filter(c => c !== cat.category));
+                                                }
+                                            }}
+                                            style={{ width: '18px', height: '18px' }}
+                                        />
+                                        <span style={{ fontSize: '16px', fontWeight: 'bold' }}>الصنف {cat.category}</span>
+                                    </label>
+                                ))}
+                            </div>
+                            {availableCategories.length === 0 && (
+                                <p style={{ textAlign: 'center', color: '#666' }}>لا توجد أصناف متاحة.</p>
+                            )}
+                        </div>
+                        <div className="modal-footer-premium" style={{ justifyContent: 'center' }}>
+                            <button className="btn-premium-sm" onClick={handleSaveUserCategories} style={{ width: '100%' }}>حفظ التعديلات</button>
                         </div>
                     </div>
                 </div>

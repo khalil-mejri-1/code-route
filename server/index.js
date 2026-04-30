@@ -126,7 +126,8 @@ app.post('/api/auth/login', async (req, res) => {
                 isApproved: user.isApproved,
                 role: user.role,
                 isFrozen: user.isFrozen,
-                subscriptions: user.isApproved || user.subscriptions || false
+                subscriptions: user.isApproved || user.subscriptions || false,
+                allowedCategories: user.allowedCategories || []
             }
         });
 
@@ -165,14 +166,15 @@ app.get('/api/users/status', async (req, res) => {
         const { email } = req.query;
         if (!email) return res.status(400).json({ message: 'البريد الإلكتروني مطلوب' });
         
-        const user = await User.findOne({ email }, 'isApproved isFrozen role subscriptions');
+        const user = await User.findOne({ email }, 'isApproved isFrozen role subscriptions allowedCategories');
         if (!user) return res.status(404).json({ message: 'المستخدم غير موجود' });
         
         res.status(200).json({ 
             isApproved: user.isApproved,
             isFrozen: user.isFrozen,
             role: user.role,
-            subscriptions: user.isApproved || user.subscriptions || false
+            subscriptions: user.isApproved || user.subscriptions || false,
+            allowedCategories: user.allowedCategories || []
         });
     } catch (error) {
         res.status(500).json({ message: 'خطأ في جلب الحالة', error: error.message });
@@ -232,7 +234,7 @@ app.get('/api/users/profile', async (req, res) => {
         const { email } = req.query;
         if (!email) return res.status(400).json({ message: 'البريد الإلكتروني مطلوب' });
 
-        const user = await User.findOne({ email }, 'fullName email role isApproved isFrozen subscriptions examResults createdAt');
+        const user = await User.findOne({ email }, 'fullName email role isApproved isFrozen subscriptions examResults createdAt allowedCategories');
         if (!user) return res.status(404).json({ message: 'المستخدم غير موجود' });
 
         const userData = user.toObject();
@@ -268,6 +270,27 @@ app.put('/api/users/:id/role', async (req, res) => {
     }
 });
 
+// 2.11 تحديث التصنيفات المسموحة للمستخدم (allowedCategories)
+app.put('/api/users/:id/categories', async (req, res) => {
+    try {
+        const { allowedCategories } = req.body;
+        
+        const user = await User.findByIdAndUpdate(
+            req.params.id,
+            { allowedCategories: allowedCategories || [] },
+            { new: true }
+        );
+
+        if (!user) return res.status(404).json({ message: 'المستخدم غير موجود' });
+
+        res.status(200).json({
+            message: 'تم تحديث التصنيفات المسموحة بنجاح',
+            user: { id: user._id, allowedCategories: user.allowedCategories }
+        });
+    } catch (error) {
+        res.status(500).json({ message: 'فشل في تحديث التصنيفات المسموحة', error: error.message });
+    }
+});
 
 // --- مسار API لإنشاء سؤال واحد ---
 app.post('/api/quiz/questions', async (req, res) => {
@@ -921,8 +944,8 @@ app.get('/api/categories', async (req, res) => {
 // 3. إضافة فئة جديدة
 app.post('/api/categories', async (req, res) => {
     try {
-        const { category, description, image, order, visible } = req.body;
-        const newCategory = new Category({ category, description, image, order: order || 0, visible: visible !== undefined ? visible : true });
+        const { category, description, image, order, visible, isFree } = req.body;
+        const newCategory = new Category({ category, description, image, order: order || 0, visible: visible !== undefined ? visible : true, isFree: isFree || false });
         await newCategory.save();
         res.status(201).json({ message: 'تم إضافة الفئة بنجاح!', category: newCategory });
     } catch (error) {
