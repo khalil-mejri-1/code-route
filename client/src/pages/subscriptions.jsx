@@ -49,7 +49,7 @@ export default function Subscriptions() {
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
-        if (file && file.size > 5 * 1024 * 1024) { 
+        if (file && file.size > 5 * 1024 * 1024) {
             setError('حجم الملف كبير جداً. الحد الأقصى هو 5 ميغابايت.');
             setPaymentReceipt(null);
         } else if (file) {
@@ -79,7 +79,7 @@ export default function Subscriptions() {
             setPhoneNumber('');
             setPaymentReceipt(null);
             if (fileInputRef.current) {
-                 fileInputRef.current.value = null; 
+                fileInputRef.current.value = null;
             }
             localStorage.setItem('subscriptions', 'true');
             setConfirmationMessage('✅ تم استلام إثبات الدفع بنجاح! سيتصل بك المسؤول في غضون 24 ساعة.');
@@ -143,14 +143,14 @@ export default function Subscriptions() {
                             <label style={{ display: 'block', marginBottom: '10px', fontWeight: 600, color: 'var(--text-white)' }}>إثبات الدفع (صورة الوصل)</label>
                             <input
                                 type="file"
-                                ref={fileInputRef} 
+                                ref={fileInputRef}
                                 accept="image/*,application/pdf"
                                 onChange={handleFileChange}
                                 disabled={loading}
                                 required
-                                style={{ display: 'none' }} 
+                                style={{ display: 'none' }}
                             />
-                            <div 
+                            <div
                                 onClick={triggerFileInput}
                                 style={{ display: 'flex', alignItems: 'center', gap: '15px', padding: '16px', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '2px dashed var(--glass-border)', cursor: 'pointer', transition: 'var(--transition-smooth)' }}
                                 onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--primary)'}

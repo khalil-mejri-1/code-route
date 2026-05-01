@@ -10,7 +10,7 @@ const Footer = () => {
           
           {/* Logo & Vision */}
           <div className="footer-col">
-            <h2 className="logo-text" style={{ marginBottom: '24px' }}>Drive</h2>
+            <h2 className="logo-text" style={{ marginBottom: '24px' }}>Code en ligne</h2>
             <p className="card-p" style={{ maxWidth: '300px', lineHeight: '1.8' }}>
               منصتكم الرائدة والذكية لتعلم جميع قواعد طرقات تونس باحترافية، بأساليب حديثة تعتمد على الرؤية الفنية والذكاء التعليمي.
             </p>

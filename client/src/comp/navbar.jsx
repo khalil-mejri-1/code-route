@@ -21,7 +21,7 @@ const Navbar = () => {
             try {
                 const response = await fetch(`${API_BASE_URL}/users/status?email=${email}`);
                 const data = await response.json();
-                
+
                 if (data.isFrozen) {
                     localStorage.removeItem('login');
                     localStorage.removeItem('userEmail');
@@ -59,7 +59,7 @@ const Navbar = () => {
         // إذا كان الحساب مقبولاً، فهو VIP تلقائياً
         const subscriptionStatus = (localStorage.getItem('subscriptions') === 'true') || isApproved;
         const currentRole = localStorage.getItem('role') || 'user';
-        
+
         setIsLoggedIn(loginStatus);
         setIsSubscribed(subscriptionStatus);
         setRole(currentRole);
@@ -96,7 +96,7 @@ const Navbar = () => {
             checkAuthStatus(); // قراءة البيانات السريعة من التخزين
             await fetchUserStatus(); // جلب البيانات الأكيدة من السيرفر وتحديث الواجهة
         };
-        
+
         initNavbar();
         window.addEventListener('storage', checkAuthStatus);
         return () => window.removeEventListener('storage', checkAuthStatus);
@@ -105,7 +105,7 @@ const Navbar = () => {
     return (
         <nav className="navbar reveal-anim">
             <div className="navbar-logo">
-                <Link to="/" className="logo-text">Drive</Link>
+                <Link to="/" className="logo-text">Code La Route</Link>
             </div>
 
             {/* Main Links */}
@@ -113,7 +113,7 @@ const Navbar = () => {
                 <li><NavLink to="/" onClick={() => setIsOpen(false)}>الرئيسية</NavLink></li>
                 <li><NavLink to="/courses" onClick={() => setIsOpen(false)}>الدروس</NavLink></li>
                 <li><NavLink to="/contact" onClick={() => setIsOpen(false)}>اتصل بنا</NavLink></li>
-                
+
                 {/* Mobile Extra Actions */}
                 <li className="mobile-only-action">
                     {!isSubscribed && (
