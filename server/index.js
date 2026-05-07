@@ -1,7 +1,9 @@
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
-const cors = require('cors'); // لإتاحة الاتصال بين React و Node.js
+const cors = require('cors');
+const path = require('path');
+const fs = require('fs');
 const Question = require('./models/Question.js'); // ⭐️ استيراد المخطط
 const User = require('./models/User.js'); // ⭐️ استيراد مخطط المستخدم
 const Category = require('./models/Category.js'); // ⭐️ استيراد مخطط الفئات
@@ -1141,9 +1143,65 @@ app.post('/api/questions/swap-answer', async (req, res) => {
 });
 
 
-// Define a simple route for the server
-app.get('/', (req, res) => {
-    res.send('DriveCode API Server is running.');
+// --- STATIC FILES & SSR ---
+const CLIENT_DIST = path.join(__dirname, '../client/dist');
+const INDEX_HTML = path.join(CLIENT_DIST, 'index.html');
+
+// Serve static files from the React build
+app.use(express.static(CLIENT_DIST, { index: false }));
+
+// Catch-all route for SPA with SSR
+app.get(/.*/, async (req, res) => {
+    if (req.path.startsWith('/api')) {
+        return res.status(404).json({ message: 'API Route not found' });
+    }
+
+    try {
+        // Try to find the best index.html template (dist first, then source)
+        let templatePath = INDEX_HTML;
+        if (!fs.existsSync(templatePath)) {
+            templatePath = path.join(__dirname, "../client/index.html");
+        }
+
+        if (!fs.existsSync(templatePath)) {
+            return res.status(404).send("Template index.html not found.");
+        }
+
+        let template = fs.readFileSync(templatePath, 'utf8');
+        let ssrHtml = "";
+        
+        // Basic SSR for Home Page
+        if (req.path === '/' || req.path === '/home') {
+            ssrHtml = `
+                <div class="ssr-shell" style="direction: rtl; font-family: sans-serif;">
+                    <header>
+                        <h1>DriveCode - تعليم السياقة في تونس</h1>
+                    </header>
+                    <main>
+                        <section>
+                            <h2>تعلم السياقة باحترافية</h2>
+                            <p>أفضل الدروس والامتحانات التجريبية للحصول على رخصة السياقة.</p>
+                        </section>
+                        <nav>
+                            <ul>
+                                <li><a href="/pricing">خطط الاشتراك</a></li>
+                                <li><a href="/login">تسجيل الدخول</a></li>
+                            </ul>
+                        </nav>
+                    </main>
+                </div>
+            `;
+        }
+
+        // Inject SSR HTML into the template
+        let finalHtml = template.replace(/<div id="root">\s*<\/div>/, `<div id="root">${ssrHtml}</div>`);
+        
+        console.log(`[SSR] Serving DriveCode page: ${req.path}`);
+        res.send(finalHtml);
+    } catch (err) {
+        console.error("SSR Error:", err);
+        res.sendFile(INDEX_HTML);
+    }
 });
 
 // Start the Express server

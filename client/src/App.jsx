@@ -1,7 +1,7 @@
 // App.jsx
 import React, { useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Home from "./pages/Home"; // Changed to 'Home' with a capital H for convention
+import Home from "./pages/home"; // Changed to 'Home' with a capital H for convention
 import WelcomeModal from "./comp/WelcomeModal"; // Import the new modal component
 import Login from "./comp/login"; // Import the new modal component
 import SignUp from "./comp/SignUp"; // Import the new modal component
