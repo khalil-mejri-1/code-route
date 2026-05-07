@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors'); // لإتاحة الاتصال بين React و Node.js
@@ -9,10 +10,10 @@ const ExamStructure = require('./models/ExamStructure.js'); // ⭐️ استير
 const Formation = require('./models/Formation.js'); // ⭐️ استيراد مخطط التكوين
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 
 // 1. **Replace the placeholder with your actual URI string**
-const MONGO_URI = "mongodb+srv://coderoute:khalilslam1234@cluster0.o1dasfi.mongodb.net/DriveCodeDB?retryWrites=true&w=majority";
+const MONGO_URI = process.env.MONGO_URI;
 // تأكد من استبدال YourDatabaseName بالاسم الفعلي لقاعدة البيانات
 
 // --- Middlewares ---

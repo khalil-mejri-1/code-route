@@ -1,0 +1,4 @@
+# Ignore .env file
+server/.env
+client/.env
+pass.txt
