@@ -105,7 +105,7 @@ const Navbar = () => {
     return (
         <nav className="navbar reveal-anim">
             <div className="navbar-logo">
-                <Link to="/" className="logo-text">Code La Route</Link>
+                <Link to="/" className="logo-text">PermiTn</Link>
             </div>
 
             {/* Main Links */}

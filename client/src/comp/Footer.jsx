@@ -7,10 +7,10 @@ const Footer = () => {
     <footer className="footer-premium" style={{ background: 'var(--bg-deep)', padding: '80px 20px', borderTop: '1px solid var(--glass-border)' }}>
       <div className="premium-container reveal-anim">
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '60px' }}>
-          
+
           {/* Logo & Vision */}
           <div className="footer-col">
-            <h2 className="logo-text" style={{ marginBottom: '24px' }}>Code en ligne</h2>
+            <h2 className="logo-text" style={{ marginBottom: '24px' }}>PermiTn</h2>
             <p className="card-p" style={{ maxWidth: '300px', lineHeight: '1.8' }}>
               منصتكم الرائدة والذكية لتعلم جميع قواعد طرقات تونس باحترافية، بأساليب حديثة تعتمد على الرؤية الفنية والذكاء التعليمي.
             </p>
@@ -47,15 +47,15 @@ const Footer = () => {
           <div className="footer-col">
             <h4 style={{ fontSize: '20px', fontWeight: 800, marginBottom: '24px' }}>تابعنا</h4>
             <div style={{ display: 'flex', gap: '16px' }}>
-               <button className="signup-button" style={{ padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                 <Facebook size={20} />
-               </button>
-               <button className="signup-button" style={{ padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Instagram size={20} />
-               </button>
-               <button className="signup-button" style={{ padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                 <Twitter size={20} />
-               </button>
+              <button className="signup-button" style={{ padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Facebook size={20} />
+              </button>
+              <button className="signup-button" style={{ padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Instagram size={20} />
+              </button>
+              <button className="signup-button" style={{ padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Twitter size={20} />
+              </button>
             </div>
           </div>
 
@@ -63,7 +63,7 @@ const Footer = () => {
 
         <div style={{ marginTop: '80px', paddingTop: '40px', borderTop: '1px solid var(--glass-border)', textAlign: 'center' }}>
           <p style={{ color: 'var(--text-dim)', fontSize: '14px' }}>
-             جميع الحقوق محفوظة © {new Date().getFullYear()} - منصة Drive لتعلم قانون السير
+            جميع الحقوق محفوظة © {new Date().getFullYear()} - منصة Drive لتعلم قانون السير
           </p>
         </div>
       </div>
