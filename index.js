@@ -10,6 +10,7 @@ const Category = require('./models/Category.js'); // ⭐️ استيراد مخ�
 const Topic = require('./models/Topic.js'); // ⭐️ استيراد مخطط المواضيع
 const ExamStructure = require('./models/ExamStructure.js'); // ⭐️ استيراد مخطط بنية الامتحانات
 const Formation = require('./models/Formation.js'); // ⭐️ استيراد مخطط التكوين
+const PageContent = require('./models/PageContent.js'); // ⭐️ استيراد مخطط محتوى الصفحة
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -1139,6 +1140,47 @@ app.post('/api/questions/swap-answer', async (req, res) => {
             message: '❌ فشل في عملية تبديل الإجابة الصحيحة.',
             error: error.message
         });
+    }
+});
+
+
+// ------------------------------------------------------------------
+// ⭐️⭐️ NEW ENDPOINTS: محتوى الصفحات (Page Content) ⭐️⭐️
+// ------------------------------------------------------------------
+app.get('/api/content/:sectionKey', async (req, res) => {
+    try {
+        const { sectionKey } = req.params;
+        const pageContent = await PageContent.findOne({ sectionKey });
+        
+        if (!pageContent) {
+            return res.status(404).json({ message: 'المحتوى غير موجود' });
+        }
+        
+        res.status(200).json(pageContent.content);
+    } catch (error) {
+        console.error('Error fetching page content:', error);
+        res.status(500).json({ message: 'فشل في جلب المحتوى', error: error.message });
+    }
+});
+
+app.put('/api/content/:sectionKey', async (req, res) => {
+    try {
+        const { sectionKey } = req.params;
+        const content = req.body;
+        
+        const pageContent = await PageContent.findOneAndUpdate(
+            { sectionKey },
+            { sectionKey, content },
+            { new: true, upsert: true } // upsert creates if it doesn't exist
+        );
+        
+        res.status(200).json({
+            message: 'تم حفظ المحتوى بنجاح',
+            content: pageContent.content
+        });
+    } catch (error) {
+        console.error('Error saving page content:', error);
+        res.status(500).json({ message: 'فشل في حفظ المحتوى', error: error.message });
     }
 });
 
