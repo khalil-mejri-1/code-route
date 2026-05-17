@@ -66,6 +66,7 @@ export default function FullExam() {
     const [hasSavedResult, setHasSavedResult] = useState(false);
 
     const isSubscribed = localStorage.getItem('subscriptions') === 'true';
+    const isAdmin = localStorage.getItem('role') === 'admin';
 
     const urlParams = new URLSearchParams(location.search);
     const categoryParam = urlParams.get('category') || 'B';
@@ -613,26 +614,30 @@ export default function FullExam() {
                     {!isLocked && (
                         <div className="classic-question-area">
                             <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '15px', justifyContent: 'center' }}>
-                                <div style={{
-                                    background: '#3b5998',
-                                    color: 'white',
-                                    padding: '4px 12px',
-                                    borderRadius: '4px',
-                                    fontSize: '12px',
-                                    fontWeight: 'bold',
-                                }}>
-                                    فئة السؤال: {currentQuestion?.category1} {currentQuestion?.category2 ? `(${currentQuestion.category2})` : ''}
-                                </div>
-                                <button
-                                    onClick={openEditModal}
-                                    className="btn-edit-classic"
-                                    style={{ margin: 0 }}
-                                >
-                                    تعديل السؤال
-                                </button>
+                                {isAdmin && (
+                                    <div style={{
+                                        background: '#3b5998',
+                                        color: 'white',
+                                        padding: '4px 12px',
+                                        borderRadius: '4px',
+                                        fontSize: '12px',
+                                        fontWeight: 'bold',
+                                    }}>
+                                        فئة السؤال: {currentQuestion?.category1} {currentQuestion?.category2 ? `(${currentQuestion.category2})` : ''}
+                                    </div>
+                                )}
+                                {isAdmin && (
+                                    <button
+                                        onClick={openEditModal}
+                                        className="btn-edit-classic"
+                                        style={{ margin: 0 }}
+                                    >
+                                        تعديل السؤال
+                                    </button>
+                                )}
                                 <button
                                     onClick={() => navigate(`/formation?category=${encodeURIComponent(category1)}`)}
-                                    className="btn-edit-classic"
+                                    className="btn-edit-classic btn-large-classic"
                                     style={{ margin: 0, background: '#10b981', color: 'white' }}
                                 >
                                     تكوين

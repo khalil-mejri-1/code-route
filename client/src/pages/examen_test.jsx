@@ -60,6 +60,7 @@ export default function Examen_test() {
     const [isSaving, setIsSaving] = useState(false);
 
     const isSubscribed = localStorage.getItem('subscriptions') === 'true';
+    const isAdmin = localStorage.getItem('role') === 'admin';
 
     useEffect(() => {
         const fetchQuestions = async () => {
@@ -236,14 +237,16 @@ export default function Examen_test() {
                         })}
                     </div>
 
-                    <button onClick={() => {
-                        setEditQuestionText(currentQuestion.question);
-                        setEditOptions(currentQuestion.options.map(o => ({ ...o })));
-                        setEditPreviewUrl(currentQuestion.image);
-                        setShowEditModal(true);
-                    }} style={{ marginTop: 'auto', background: 'none', border: '1px solid var(--glass-border)', color: 'white', padding: '12px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', cursor: 'pointer' }}>
-                        <Settings size={18} /> إعدادات السؤال
-                    </button>
+                    {isAdmin && (
+                        <button onClick={() => {
+                            setEditQuestionText(currentQuestion.question);
+                            setEditOptions(currentQuestion.options.map(o => ({ ...o })));
+                            setEditPreviewUrl(currentQuestion.image);
+                            setShowEditModal(true);
+                        }} style={{ marginTop: 'auto', background: 'none', border: '1px solid var(--glass-border)', color: 'white', padding: '12px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', cursor: 'pointer' }}>
+                            <Settings size={18} /> إعدادات السؤال
+                        </button>
+                    )}
                 </aside>
 
                 <main className="question-content-premium reveal-anim">

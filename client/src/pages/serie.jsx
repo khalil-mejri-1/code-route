@@ -578,12 +578,12 @@ export default function Serie() {
                         <div className="classic-question-area">
                             <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', marginBottom: '15px' }}>
                                 {isAdmin && (
-                                    <>
-                                        <div className="category-tag">{category1} {category2 ? `(${category2})` : ''}</div>
-                                        <button onClick={openEditModal} className="btn-edit-classic">تعديل السؤال</button>
-                                        <button onClick={() => navigate(`/formation?category=${encodeURIComponent(category1)}`)} className="btn-edit-classic" style={{ background: '#10b981', color: 'white' }}>تكوين</button>
-                                    </>
+                                    <div className="category-tag">{category1} {category2 ? `(${category2})` : ''}</div>
                                 )}
+                                {isAdmin && (
+                                    <button onClick={openEditModal} className="btn-edit-classic">تعديل السؤال</button>
+                                )}
+                                <button onClick={() => navigate(`/formation?category=${encodeURIComponent(category1)}`)} className="btn-edit-classic btn-large-classic" style={{ background: '#10b981', color: 'white' }}>تكوين</button>
                             </div>
                             <h1 className="classic-question-text">{currentQuestion.question}</h1>
                             <div className="classic-options-container">
