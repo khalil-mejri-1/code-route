@@ -170,18 +170,20 @@ export default function Serie() {
     const currentQuestion = quizData[currentQuestionIndex];
 
     useEffect(() => {
-        if (currentQuestion) {
+        if (currentQuestion && currentQuestion.image) {
             const img = new Image();
             img.src = currentQuestion.image;
             if (img.complete) {
                 setImageLoading(false);
             } else {
                 setImageLoading(true);
-                const timer = setTimeout(() => setImageLoading(false), 2000);
-                return () => clearTimeout(timer);
+                img.onload = () => setImageLoading(false);
+                img.onerror = () => setImageLoading(false);
             }
+        } else {
+            setImageLoading(false);
         }
-    }, [currentQuestionIndex]);
+    }, [currentQuestionIndex, currentQuestion]);
 
     useEffect(() => {
         if (isLocked || showAnswer || isExamFinished || isReviewMode) return;

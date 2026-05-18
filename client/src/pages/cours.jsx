@@ -138,10 +138,16 @@ const CardComponent = ({ id, category, description, image, order, visible, isFre
 }
 
 export default function Cours() {
-    const [licenseCategories, setLicenseCategories] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [licenseCategories, setLicenseCategories] = useState(() => {
+        const cached = localStorage.getItem('cached_categories');
+        return cached ? JSON.parse(cached) : [];
+    });
+    const [loading, setLoading] = useState(() => !localStorage.getItem('cached_categories'));
     const [isApproved, setIsApproved] = useState(localStorage.getItem('isApproved') === 'true');
-    const [userAllowedCategories, setUserAllowedCategories] = useState([]);
+    const [userAllowedCategories, setUserAllowedCategories] = useState(() => {
+        const cached = localStorage.getItem('cached_allowed_categories');
+        return cached ? JSON.parse(cached) : [];
+    });
 
     const isLoggedIn = localStorage.getItem('login') === 'true';
     const isSubscribed = localStorage.getItem('subscriptions') === 'true';
@@ -167,6 +173,7 @@ export default function Cours() {
                 setIsApproved(approvedStatus);
                 setUserAllowedCategories(allowedCategories || []);
                 localStorage.setItem('isApproved', approvedStatus.toString());
+                localStorage.setItem('cached_allowed_categories', JSON.stringify(allowedCategories || []));
                 if (role) localStorage.setItem('role', role);
             } catch (error) {
                 console.error('Error fetching user status:', error);
@@ -189,6 +196,7 @@ export default function Cours() {
         try {
             const response = await axios.get(`${API_BASE_URL}/categories`);
             setLicenseCategories(response.data);
+            localStorage.setItem('cached_categories', JSON.stringify(response.data));
         } catch (error) {
             console.error('Error fetching categories:', error);
         } finally {
